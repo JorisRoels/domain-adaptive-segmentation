@@ -16,6 +16,7 @@ We acknowledge the code of [DANN](https://github.com/fungtion/DANN), [CORAL](htt
     - tifffile (for data loading)
     - [imgaug](https://github.com/aleju/imgaug) (data augmentation) 
 - [EPFL](https://cvlab.epfl.ch/data/data-em/) data should be in the [data/epfl](data/epfl) folder for testing the demo script. 
+- [Drosophila](https://github.com/unidesigner/groundtruth-drosophila-vnc) data should be in the [data/drosophila](data/drosophila) folder for testing the demo script. 
 
 ## Instructions
 The proposed DA approaches consist of two steps: 1) unsupervised domain alignment with source labels and 2) supervised finetuning with available target labels. 
