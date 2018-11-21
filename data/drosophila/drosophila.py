@@ -3,6 +3,7 @@ import random
 import os
 import numpy as np
 import torch.utils.data as data
+from scipy import misc
 from util.preprocessing import normalize
 from util.io import read_tif
 from util.tools import sample_labeled_input, sample_unlabeled_input
@@ -18,8 +19,7 @@ class DrosophilaDataset(data.Dataset):
         self.transform = transform
         self.target_transform = target_transform
 
-        self.data = read_tif(os.path.join('data', 'drosophila', 'stack1', 'data.tif'), dtype='uint8')
-        self.labels = read_tif(os.path.join('data', 'drosophila', 'stack1', 'mito_labels.tif'), dtype='int')
+        self.data, self.labels = self.read_data()
         # in the training case, we split the image in 4 strips which are concatenated along the z-axis
         # this allows to select a fraction of the data along that axis (otherwise only 13 slices, now 42)
         if self.train:
@@ -91,6 +91,18 @@ class DrosophilaDataset(data.Dataset):
 
         return mu, std
 
+    def read_data(self):
+
+        data = np.zeros((20, 1024, 1024), dtype='uint8')
+        labels = np.zeros((20, 1024, 1024), dtype='int')
+
+        for i in range(20):
+            i_str = str(i) if i>9 else '0'+str(i)
+            data[i] = read_tif(os.path.join('data', 'drosophila', 'groundtruth-drosophila-vnc', 'stack1', 'raw', i_str+'.tif'), dtype='uint8')
+            labels[i] = misc.imread(os.path.join('data', 'drosophila', 'groundtruth-drosophila-vnc', 'stack1', 'mitochondria', i_str+'.png'))
+
+        return data, labels
+
 class DrosophilaUnlabeledDataset(data.Dataset):
 
     def __init__(self, input_shape, len_epoch=1000, transform=None):
@@ -99,9 +111,7 @@ class DrosophilaUnlabeledDataset(data.Dataset):
         self.len_epoch = len_epoch
         self.transform = transform
 
-        stack1 = read_tif(os.path.join('data', 'drosophila', 'stack1', 'data.tif'), dtype='uint8')
-        stack2 = read_tif(os.path.join('data', 'drosophila', 'stack2', 'data.tif'), dtype='uint8')
-        self.data = np.concatenate((stack1, stack2), axis=0)
+        self.data = self.read_data()
 
         # normalize data
         mu, std = self.get_stats()
@@ -130,3 +140,14 @@ class DrosophilaUnlabeledDataset(data.Dataset):
         std = np.std(self.data)
 
         return mu, std
+
+    def read_data(self):
+
+        data = np.zeros((40, 1024, 1024), dtype='uint8')
+
+        for i in range(20):
+            i_str = str(i) if i>9 else '0'+str(i)
+            data[i] = read_tif(os.path.join('data', 'drosophila', 'groundtruth-drosophila-vnc', 'stack1', 'raw', i_str+'.tif'), dtype='uint8')
+            data[20+i] = read_tif(os.path.join('data', 'drosophila', 'groundtruth-drosophila-vnc', 'stack2', 'raw', i_str+'.tif'), dtype='uint8')
+
+        return data
