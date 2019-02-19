@@ -29,4 +29,4 @@ We acknowledge the code of [DAT](https://github.com/fungtion/DANN), [CORAL](http
   - [VNC mitochondria dataset (target)](https://github.com/unidesigner/groundtruth-drosophila-vnc)
 
 ## Usage
-We provide a [notebook](ynet.ipynb) that illustrates usage of our method. Note that the data path might be different, depending on where you downloaded the data. 
+We provide notebooks for [Y-Net](ynet.ipynb), [DAT](dat.ipynb), [CORAL](coral.ipynb) and [MMD](mmd.ipynb) that illustrate the usage of our methods. Note that the data path might be different, depending on where you downloaded the data. 
