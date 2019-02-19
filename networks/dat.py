@@ -141,7 +141,7 @@ class DATUNetDecoder(nn.Module):
 # DANN U-Net model
 class UNet_DAT(nn.Module):
 
-    def __init__(self, n, lambdas, in_channels=1, out_channels=2, feature_maps=64, levels=4, group_norm=True):
+    def __init__(self, n, lambdas, in_channels=1, out_channels=2, feature_maps=64, levels=4, group_norm=False):
         super(UNet_DAT, self).__init__()
 
         self.in_channels = in_channels

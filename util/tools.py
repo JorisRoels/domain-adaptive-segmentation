@@ -1,6 +1,7 @@
 
 import numpy as np
 import torch
+from skimage.color import label2rgb
 
 # generate an input and target sample of certain shape from a labeled dataset
 def sample_labeled_input(data, labels, input_shape):
@@ -72,3 +73,9 @@ def gaussian_window(size, sigma=1):
 # load a network
 def load_net(model_file):
     return torch.load(model_file)
+
+# returns an image overlayed with a labeled mask
+# x is assumed to be a grayscale numpy array
+# y is assumed to be a numpy array of integers for the different labels, all zeros will be opaque
+def overlay(x, y, alpha=0.3, bg_label=0):
+    return label2rgb(y, image=x, alpha=alpha, bg_label=bg_label, colors=[[0,1,0]])

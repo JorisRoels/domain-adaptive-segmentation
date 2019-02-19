@@ -1,10 +1,11 @@
 numpy
 tifffile
 scipy
-progressbar2
 scikit-image
 imgaug
-tensorboardX
-jupyter
 torch
 torchvision
+jupyter
+progressbar2
+tensorboardX
+tensorflow

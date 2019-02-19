@@ -14,7 +14,7 @@ from networks.unet import UNetEncoder2D, UNetDecoder2D, unet_from_encoder_decode
 # MMD U-Net model
 class UNet_MMD(nn.Module):
 
-    def __init__(self, in_channels=1, out_channels=2, feature_maps=64, levels=4, group_norm=True):
+    def __init__(self, in_channels=1, out_channels=2, feature_maps=64, levels=4, group_norm=False):
         super(UNet_MMD, self).__init__()
 
         self.in_channels = in_channels
