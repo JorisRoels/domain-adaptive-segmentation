@@ -8,7 +8,7 @@ import torch.nn.functional as F
 import torchvision.utils as vutils
 from tensorboardX import SummaryWriter
 
-from networks.unet import UNetEncoder, UNetDecoder, UNet, unet_from_encoder_decoder
+from networks.unet import UNetEncoder2D, UNetDecoder2D, unet_from_encoder_decoder
 
 # Y-Net model
 class YNet(nn.Module):
@@ -22,13 +22,13 @@ class YNet(nn.Module):
         self.levels = levels
 
         # encoder
-        self.encoder = UNetEncoder(in_channels=in_channels, feature_maps=feature_maps, levels=levels, group_norm=group_norm)
+        self.encoder = UNetEncoder2D(in_channels=in_channels, feature_maps=feature_maps, levels=levels, group_norm=group_norm)
 
         # segmentation decoder
-        self.segmentation_decoder = UNetDecoder(out_channels=out_channels, feature_maps=feature_maps, levels=levels, group_norm=group_norm)
+        self.segmentation_decoder = UNetDecoder2D(out_channels=out_channels, feature_maps=feature_maps, levels=levels, group_norm=group_norm)
 
         # reconstruction decoder
-        self.reconstruction_decoder = UNetDecoder(out_channels=in_channels, feature_maps=feature_maps, levels=levels, group_norm=group_norm, skip_connections=False)
+        self.reconstruction_decoder = UNetDecoder2D(out_channels=in_channels, feature_maps=feature_maps, levels=levels, group_norm=group_norm, skip_connections=False)
 
     def forward(self, inputs):
 
@@ -98,22 +98,22 @@ class YNet(nn.Module):
 
             # print statistics of necessary
             if i % print_stats == 0:
-                print('    [%5d] Jaccard src: %.6f - MSE src: %.6f - MSE tar: %.6f - Total loss: %.6f'
-                      % (i, loss_seg_src, loss_rec_src, loss_rec_tar, total_loss))
+                print('[%s] Epoch %5d - Iteration %5d/%5d - Loss seg src: %.6f - Loss rec src: %.6f - Loss rec tar: %.6f - Loss: %.6f'
+                      % (datetime.datetime.now(), epoch, i, len(loader_src.dataset)/loader_src.batch_size, loss_seg_src, loss_rec_src, loss_rec_tar, total_loss))
 
         # don't forget to compute the average and print it
         loss_seg_src_avg = loss_seg_src_cum / len(loader_src.dataset)
         loss_rec_src_avg = loss_rec_src_cum / len(loader_src.dataset)
         loss_rec_tar_avg = loss_rec_tar_cum / len(loader_src.dataset)
         total_loss_avg = total_loss_cum / len(loader_src.dataset)
-        print('TRAIN: Jaccard src: %.6f - MSE src: %.6f - MSE tar: %.6f - Total loss: %.6f'
-              % (loss_seg_src_avg, loss_rec_src_avg, loss_rec_tar_avg, total_loss_avg))
+        print('[%s] Epoch %5d - Loss seg src: %.6f - Loss rec src: %.6f - Loss rec tar: %.6f - Loss: %.6f'
+              % (datetime.datetime.now(), epoch, loss_seg_src_avg, loss_rec_src_avg, loss_rec_tar_avg, total_loss_avg))
 
         # scalars
-        writer.add_scalar('train/jaccard_src', loss_seg_src_avg, epoch)
-        writer.add_scalar('train/mse_src', loss_rec_src_avg, epoch)
-        writer.add_scalar('train/mse_tar', loss_rec_tar_avg, epoch)
-        writer.add_scalar('train/total_loss', total_loss_avg, epoch)
+        writer.add_scalar('train-src/loss-seg', loss_seg_src_avg, epoch)
+        writer.add_scalar('train-src/loss-rec', loss_rec_src_avg, epoch)
+        writer.add_scalar('train-tar/loss-rec', loss_rec_tar_avg, epoch)
+        writer.add_scalar('train/loss', total_loss_avg, epoch)
 
         # log everything
         if writer is not None and write_images:
@@ -128,13 +128,13 @@ class YNet(nn.Module):
                                        normalize=y_src_pred.max() - y_src_pred.min() > 0, scale_each=True)
             yt_pred = vutils.make_grid(F.softmax(y_tar_pred, dim=1)[:, 1:2, :, :].data,
                                        normalize=y_tar_pred.max() - y_tar_pred.min() > 0, scale_each=True)
-            writer.add_image('train/xs', xs, epoch)
-            writer.add_image('train/xt', xt, epoch)
-            writer.add_image('train/ys', ys, epoch)
-            writer.add_image('train/xs_pred', xs_pred, epoch)
-            writer.add_image('train/xt_pred', xt_pred, epoch)
-            writer.add_image('train/ys_pred', ys_pred, epoch)
-            writer.add_image('train/yt_pred', yt_pred, epoch)
+            writer.add_image('train-src/x', xs, epoch)
+            writer.add_image('train-tar/x', xt, epoch)
+            writer.add_image('train-src/y', ys, epoch)
+            writer.add_image('train-src/x-pred', xs_pred, epoch)
+            writer.add_image('train-tar/x-pred', xt_pred, epoch)
+            writer.add_image('train-src/y-pred', ys_pred, epoch)
+            writer.add_image('train-tar/y-pred', yt_pred, epoch)
 
         return total_loss_avg
 
@@ -184,15 +184,15 @@ class YNet(nn.Module):
         loss_rec_src_avg = loss_rec_src_cum / len(loader_src.dataset)
         loss_rec_tar_avg = loss_rec_tar_cum / len(loader_tar.dataset)
         total_loss_avg = total_loss_cum / len(loader_src.dataset)
-        print('TEST: Jaccard src: %.6f - Jaccard tar: %.6f - MSE src: %.6f - MSE tar: %.6f - Total loss: %.6f'
-              % (loss_seg_src_avg, loss_seg_tar_avg, loss_rec_src_avg, loss_rec_tar_avg, total_loss_avg))
+        print('[%s] Epoch %5d - Loss seg src: %.6f - Loss seg tar: %.6f - Loss rec src: %.6f - Loss rec tar: %.6f - Loss: %.6f'
+              % (datetime.datetime.now(), epoch, loss_seg_src_avg, loss_seg_tar_avg, loss_rec_src_avg, loss_rec_tar_avg, total_loss_avg))
 
         # scalars
-        writer.add_scalar('test/jaccard_src', loss_seg_src_avg, epoch)
-        writer.add_scalar('test/jaccard_tar', loss_seg_tar_avg, epoch)
-        writer.add_scalar('test/mse_src', loss_rec_src_avg, epoch)
-        writer.add_scalar('test/mse_tar', loss_rec_tar_avg, epoch)
-        writer.add_scalar('test/total_loss', total_loss_avg, epoch)
+        writer.add_scalar('test-src/loss-seg', loss_seg_src_avg, epoch)
+        writer.add_scalar('test-tar/loss-seg', loss_seg_tar_avg, epoch)
+        writer.add_scalar('test-src/loss-rec', loss_rec_src_avg, epoch)
+        writer.add_scalar('test-tar/loss-rec', loss_rec_tar_avg, epoch)
+        writer.add_scalar('test/loss', total_loss_avg, epoch)
 
         # log everything
         if writer is not None and write_images:
@@ -208,14 +208,14 @@ class YNet(nn.Module):
                                        normalize=y_src_pred.max() - y_src_pred.min() > 0, scale_each=True)
             yt_pred = vutils.make_grid(F.softmax(y_tar_pred, dim=1)[:, 1:2, :, :].data,
                                        normalize=y_tar_pred.max() - y_tar_pred.min() > 0, scale_each=True)
-            writer.add_image('test/xs', xs, epoch)
-            writer.add_image('test/xt', xt, epoch)
-            writer.add_image('test/ys', ys, epoch)
-            writer.add_image('test/yt', yt, epoch)
-            writer.add_image('test/xs_pred', xs_pred, epoch)
-            writer.add_image('test/xt_pred', xt_pred, epoch)
-            writer.add_image('test/ys_pred', ys_pred, epoch)
-            writer.add_image('test/yt_pred', yt_pred, epoch)
+            writer.add_image('test-src/x', xs, epoch)
+            writer.add_image('test-tar/x', xt, epoch)
+            writer.add_image('test-src/y', ys, epoch)
+            writer.add_image('test-tar/y', yt, epoch)
+            writer.add_image('test-src/x-pred', xs_pred, epoch)
+            writer.add_image('test-tar/x-pred', xt_pred, epoch)
+            writer.add_image('test-src/y-pred', ys_pred, epoch)
+            writer.add_image('test-tar/y-pred', yt_pred, epoch)
 
         return total_loss_avg, loss_seg_tar_avg
 

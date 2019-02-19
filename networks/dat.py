@@ -10,8 +10,8 @@ import torchvision.utils as vutils
 from tensorboardX import SummaryWriter
 
 from networks.cnn import CNN
-from networks.blocks import UNetConvBlock, UNetUpSamplingBlock
-from networks.unet import UNetEncoder, UNetDecoder, UNet, unet_from_encoder_decoder
+from networks.blocks import UNetConvBlock2D, UNetUpSamplingBlock2D
+from networks.unet import unet_from_encoder_decoder
 
 # gradient reversal
 class ReverseLayerF(Function):
@@ -27,10 +27,10 @@ class ReverseLayerF(Function):
         return output, None
 
 # original 2D unet encoder
-class DANNUNetEncoder(nn.Module):
+class DATUNetEncoder(nn.Module):
 
     def __init__(self, lambdas, in_channels=1, feature_maps=64, levels=4, group_norm=True):
-        super(DANNUNetEncoder, self).__init__()
+        super(DATUNetEncoder, self).__init__()
 
         self.lambdas = lambdas
         self.in_channels = in_channels
@@ -44,7 +44,7 @@ class DANNUNetEncoder(nn.Module):
             out_features = (2**i) * feature_maps
 
             # convolutional block
-            conv_block = UNetConvBlock(in_features, out_features, group_norm=group_norm)
+            conv_block = UNetConvBlock2D(in_features, out_features, group_norm=group_norm)
             self.features.add_module('convblock%d' % (i + 1), conv_block)
 
             # pooling
@@ -55,7 +55,7 @@ class DANNUNetEncoder(nn.Module):
             in_features = out_features
 
         # center (lowest) block
-        self.center_conv = UNetConvBlock(2**(levels-1) * feature_maps, 2**levels * feature_maps, group_norm=group_norm)
+        self.center_conv = UNetConvBlock2D(2**(levels-1) * feature_maps, 2**levels * feature_maps, group_norm=group_norm)
 
     def forward(self, inputs):
 
@@ -84,10 +84,10 @@ class DANNUNetEncoder(nn.Module):
             return encoder_outputs, outputs
 
 # original 2D unet decoder
-class DANNUNetDecoder(nn.Module):
+class DATUNetDecoder(nn.Module):
 
     def __init__(self, lambdas, out_channels=2, feature_maps=64, levels=4, skip_connections=True, group_norm=True):
-        super(DANNUNetDecoder, self).__init__()
+        super(DATUNetDecoder, self).__init__()
 
         self.lambdas = lambdas
         self.out_channels = out_channels
@@ -100,14 +100,14 @@ class DANNUNetDecoder(nn.Module):
         for i in range(levels):
 
             # upsampling block
-            upconv = UNetUpSamplingBlock(2**(levels-i) * feature_maps, 2**(levels-i-1) * feature_maps, deconv=True)
+            upconv = UNetUpSamplingBlock2D(2**(levels-i) * feature_maps, 2**(levels-i-1) * feature_maps, deconv=True)
             self.features.add_module('upconv%d' % (i + 1), upconv)
 
             # convolutional block
             if skip_connections:
-                conv_block = UNetConvBlock(2**(levels-i) * feature_maps, 2**(levels-i-1) * feature_maps, group_norm=group_norm)
+                conv_block = UNetConvBlock2D(2**(levels-i) * feature_maps, 2**(levels-i-1) * feature_maps, group_norm=group_norm)
             else:
-                conv_block = UNetConvBlock(2**(levels-i-1) * feature_maps, 2**(levels-i-1) * feature_maps, group_norm=group_norm)
+                conv_block = UNetConvBlock2D(2**(levels-i-1) * feature_maps, 2**(levels-i-1) * feature_maps, group_norm=group_norm)
             self.features.add_module('convblock%d' % (i + 1), conv_block)
 
         # output layer
@@ -139,10 +139,10 @@ class DANNUNetDecoder(nn.Module):
             return encoder_outputs, outputs
 
 # DANN U-Net model
-class UNet_DANN(nn.Module):
+class UNet_DAT(nn.Module):
 
     def __init__(self, n, lambdas, in_channels=1, out_channels=2, feature_maps=64, levels=4, group_norm=True):
-        super(UNet_DANN, self).__init__()
+        super(UNet_DAT, self).__init__()
 
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -151,10 +151,10 @@ class UNet_DANN(nn.Module):
         self.lambdas = lambdas
 
         # encoder
-        self.encoder = DANNUNetEncoder(lambdas=lambdas, in_channels=in_channels, feature_maps=feature_maps, levels=levels, group_norm=group_norm)
+        self.encoder = DATUNetEncoder(lambdas=lambdas, in_channels=in_channels, feature_maps=feature_maps, levels=levels, group_norm=group_norm)
 
         # segmentation decoder
-        self.segmentation_decoder = DANNUNetDecoder(lambdas=lambdas, out_channels=out_channels, feature_maps=feature_maps, levels=levels, group_norm=group_norm)
+        self.segmentation_decoder = DATUNetDecoder(lambdas=lambdas, out_channels=out_channels, feature_maps=feature_maps, levels=levels, group_norm=group_norm)
 
         # domain classifiers
         self.encoder_classifiers = []
@@ -296,8 +296,8 @@ class UNet_DANN(nn.Module):
 
             # print statistics of necessary
             if i % print_stats == 0:
-                print('[%s] Epoch %5d - Iteration %5d/%5d - Loss segmentation src: %.6f - Loss domain src: %.6f - Loss domain tar: %.6f - Total loss: %.6f'
-                      % (datetime.datetime.now(), epoch, i, len(loader_src.dataset), loss_seg_src, loss_dom_src, loss_dom_tar, loss))
+                print('[%s] Epoch %5d - Iteration %5d/%5d - Loss seg src: %.6f - Loss domain src: %.6f - Loss domain tar: %.6f - Loss: %.6f'
+                      % (datetime.datetime.now(), epoch, i, len(loader_src.dataset)/loader_src.batch_size, loss_seg_src, loss_dom_src, loss_dom_tar, loss))
 
         # don't forget to compute the average and print it
         loss_seg_src_avg = loss_seg_src_cum / cnt
@@ -309,52 +309,56 @@ class UNet_DANN(nn.Module):
 
         loss_avg = loss_cum / cnt
 
-        print('[%s] Epoch %5d - Train averages: Loss segmentation src: %.6f - Loss domain src: %.6f - Loss domain tar: %.6f - Total loss: %.6f'
+        print('[%s] Epoch %5d - Loss seg src: %.6f - Loss domain src: %.6f - Loss domain tar: %.6f - Total loss: %.6f'
               % (datetime.datetime.now(), epoch, loss_seg_src_avg, loss_dom_src_avg, loss_dom_tar_avg, loss_avg))
+
+        # always log scalars
+        writer.add_scalar('train-src/loss-seg', loss_seg_src_avg, epoch)
+        writer.add_scalar('train-src/loss-dom', loss_dom_src_avg, epoch)
+        writer.add_scalar('train-tar/loss-dom', loss_dom_tar_avg, epoch)
+        writer.add_scalar('train/loss', loss_avg, epoch)
+        for k in range(len(losses_dom_src_avg)):
+            if lambdas[k] > 0:
+                writer.add_scalar('train-src/loss-dom-'+str(k), losses_dom_src_avg[k], epoch)
+                writer.add_scalar('train-tar/loss-dom-' + str(k), losses_dom_tar_avg[k], epoch)
 
         # log everything
         if writer is not None:
-
-            # always log scalars
-            writer.add_scalar('train_src/loss_seg', loss_seg_src_avg, epoch)
-            writer.add_scalar('train_src/loss_dom', loss_dom_src_avg, epoch)
-            writer.add_scalar('train_tar/loss_dom', loss_dom_tar_avg, epoch)
-            writer.add_scalar('train/loss', loss_avg, epoch)
-            for k in range(len(losses_dom_src_avg)):
-                if lambdas[k] > 0:
-                    writer.add_scalar('train_src/loss_dom_'+str(k), losses_dom_src_avg[k], epoch)
-                    writer.add_scalar('train_tar/loss_dom_' + str(k), losses_dom_tar_avg[k], epoch)
 
             if write_images:
                 # write images
                 x_src = vutils.make_grid(x_src, normalize=True, scale_each=True)
                 x_tar = vutils.make_grid(x_tar, normalize=True, scale_each=True)
-                y_src = vutils.make_grid(y_src, normalize=y_src.max()-y_src.min()>0, scale_each=True)
-                y_src_pred = vutils.make_grid(F.softmax(y_src_pred, dim=1)[:,1:2,:,:].data, normalize=y_src_pred.max()-y_src_pred.min()>0, scale_each=True)
-                y_tar_pred = vutils.make_grid(F.softmax(y_tar_pred, dim=1)[:,1:2,:,:].data, normalize=y_tar_pred.max()-y_tar_pred.min()>0, scale_each=True)
-                writer.add_image('train_src/x', x_src, epoch)
-                writer.add_image('train_tar/x', x_tar, epoch)
-                writer.add_image('train_src/y', y_src, epoch)
-                writer.add_image('train_src/y_pred', y_src_pred, epoch)
-                writer.add_image('train_tar/y_pred', y_tar_pred, epoch)
+                y_src = vutils.make_grid(y_src, normalize=y_src.max() - y_src.min() > 0, scale_each=True)
+                y_src_pred = vutils.make_grid(F.softmax(y_src_pred, dim=1)[:, 1:2, :, :].data,
+                                              normalize=y_src_pred.max() - y_src_pred.min() > 0, scale_each=True)
+                y_tar_pred = vutils.make_grid(F.softmax(y_tar_pred, dim=1)[:, 1:2, :, :].data,
+                                              normalize=y_tar_pred.max() - y_tar_pred.min() > 0, scale_each=True)
+                writer.add_image('train-src/x', x_src, epoch)
+                writer.add_image('train-tar/x', x_tar, epoch)
+                writer.add_image('train-src/y', y_src, epoch)
+                writer.add_image('train-src/y-pred', y_src_pred, epoch)
+                writer.add_image('train-tar/y-pred', y_tar_pred, epoch)
 
         return loss_avg
 
     # tests the network over one epoch
-    def test_epoch(self, loader_src, loader_tar, loss_fn, lambdas, epoch, writer=None, write_images=False):
+    def test_epoch(self, loader_src, loader_tar, loss_seg_fn, lambdas, epoch, writer=None, write_images=False):
 
         # make sure network is on the gpu and in training mode
         self.cuda()
         self.eval()
 
-        # keep track of the average loss during the epoch
-        loss_cum = 0.0
+        # keep track of the average losses during the epoch
         loss_seg_src_cum = 0.0
         losses_dom_src_cum = np.zeros(len(lambdas))
         loss_dom_src_cum = 0.0
+
+        loss_seg_tar_cum = 0.0
         losses_dom_tar_cum = np.zeros(len(lambdas))
         loss_dom_tar_cum = 0.0
-        loss_tar_cum = 0.0
+
+        loss_cum = 0.0
         cnt = 0
 
         # domain loss function
@@ -379,8 +383,10 @@ class UNet_DANN(nn.Module):
             domain_pred_tar, y_tar_pred = self(x_tar)
 
             # compute segmentation loss on source predictions
-            loss_seg_src = loss_fn(y_src_pred, y_src)
+            loss_seg_src = loss_seg_fn(y_src_pred, y_src)
             loss_seg_src_cum += loss_seg_src.data.cpu().numpy()
+            loss_seg_tar = loss_seg_fn(y_tar_pred, y_tar)
+            loss_seg_tar_cum += loss_seg_tar.data.cpu().numpy()
 
             # compute domain loss
             loss_dom_src = 0
@@ -403,45 +409,52 @@ class UNet_DANN(nn.Module):
             loss = loss_seg_src + loss_dom_src + loss_dom_tar
             loss_cum += loss.data.cpu().numpy()
 
-        # test loss on target
-        cnt = 0
-        for i, data in enumerate(loader_tar):
-
-            # get the inputs
-            x, y = data[0].cuda(), data[1].cuda()
-
-            # forward prop
-            _, y_pred = self(x)
-
-            # compute loss
-            loss = loss_fn(y_pred, y)
-            loss_tar_cum += loss.data.cpu().numpy()
-            cnt += 1
-
         # don't forget to compute the average and print it
+        loss_seg_src_avg = loss_seg_src_cum / cnt
+        losses_dom_src_avg = losses_dom_src_cum / cnt
+        loss_dom_src_avg = loss_dom_src_cum / cnt
+
+        loss_seg_tar_avg = loss_seg_tar_cum / cnt
+        losses_dom_tar_avg = losses_dom_tar_cum / cnt
+        loss_dom_tar_avg = loss_dom_tar_cum / cnt
+
         loss_avg = loss_cum / cnt
-        loss_tar_avg = loss_tar_cum / cnt
-        print('[%s] Epoch %5d - Average test loss: %.6f - Average test loss on target: %.6f'
-              % (datetime.datetime.now(), epoch, loss_avg, loss_tar_avg))
+
+        print('[%s] Epoch %5d - Loss seg src: %.6f - Loss seg tar: %.6f - Loss domain src: %.6f - Loss domain tar: %.6f - Total loss: %.6f'
+              % (datetime.datetime.now(), epoch, loss_seg_src_avg, loss_seg_tar_avg, loss_dom_src_avg, loss_dom_tar_avg, loss_avg))
+
+        # always log scalars
+        writer.add_scalar('test-src/loss-seg', loss_seg_src_avg, epoch)
+        writer.add_scalar('test-tar/loss-seg', loss_seg_tar_avg, epoch)
+        writer.add_scalar('test-src/loss-dom', loss_dom_src_avg, epoch)
+        writer.add_scalar('test-tar/loss-dom', loss_dom_tar_avg, epoch)
+        writer.add_scalar('test/loss', loss_avg, epoch)
+        for k in range(len(losses_dom_src_avg)):
+            if lambdas[k] > 0:
+                writer.add_scalar('test-src/loss-dom-'+str(k), losses_dom_src_avg[k], epoch)
+                writer.add_scalar('test-tar/loss-dom-' + str(k), losses_dom_tar_avg[k], epoch)
 
         # log everything
         if writer is not None:
 
-            # always log scalars
-            writer.add_scalar('test/loss_target', loss_avg, epoch)
-            writer.add_scalar('test/loss_target', loss_tar_avg, epoch)
-
             if write_images:
                 # write images
+                x_src = vutils.make_grid(x_src, normalize=True, scale_each=True)
                 x_tar = vutils.make_grid(x_tar, normalize=True, scale_each=True)
+                y_src = vutils.make_grid(y_src, normalize=y_src.max() - y_src.min() > 0, scale_each=True)
                 y_tar = vutils.make_grid(y_tar, normalize=y_tar.max() - y_tar.min() > 0, scale_each=True)
+                y_src_pred = vutils.make_grid(F.softmax(y_src_pred, dim=1)[:, 1:2, :, :].data,
+                                              normalize=y_src_pred.max() - y_src_pred.min() > 0, scale_each=True)
                 y_tar_pred = vutils.make_grid(F.softmax(y_tar_pred, dim=1)[:, 1:2, :, :].data,
                                               normalize=y_tar_pred.max() - y_tar_pred.min() > 0, scale_each=True)
-                writer.add_image('test/x_tar', x_tar, epoch)
-                writer.add_image('test/y_tar', y_tar, epoch)
-                writer.add_image('test/y_tar_pred', y_tar_pred, epoch)
+                writer.add_image('test-src/x', x_src, epoch)
+                writer.add_image('test-tar/x', x_tar, epoch)
+                writer.add_image('test-src/y', y_src, epoch)
+                writer.add_image('test-tar/y', y_tar, epoch)
+                writer.add_image('test-src/y-pred', y_src_pred, epoch)
+                writer.add_image('test-tar/y-pred', y_tar_pred, epoch)
 
-        return loss_avg, loss_tar_avg
+        return loss_avg
 
     # trains the network
     def train_net(self, train_loader_source, test_loader_source, train_loader_target, test_loader_target, loss_fn, lambdas, optimizer,
@@ -472,13 +485,13 @@ class UNet_DANN(nn.Module):
 
             # test the model for one epoch is necessary
             if epoch % test_freq == 0:
-                test_loss, test_loss_tar = self.test_epoch(loader_src=test_loader_source, loader_tar=test_loader_target,
-                                                           loss_fn=loss_fn, lambdas=lambdas, epoch=epoch,
+                test_loss = self.test_epoch(loader_src=test_loader_source, loader_tar=test_loader_target,
+                                                           loss_seg_fn=loss_fn, lambdas=lambdas, epoch=epoch,
                                                            writer=writer, write_images=True)
 
                 # and save model if lower test loss is found
-                if test_loss_tar < test_loss_min:
-                    test_loss_min = test_loss_tar
+                if test_loss < test_loss_min:
+                    test_loss_min = test_loss
                     torch.save(self, os.path.join(log_dir, 'best_checkpoint.pytorch'))
 
             # save model every epoch

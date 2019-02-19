@@ -5,9 +5,9 @@ import torch.nn as nn
 from networks.layers import GroupNorm2d
 
 # 2D convolution layer with batch normalization and relu activation
-class ConvBatchNormRelu(nn.Module):
+class ConvBatchNormRelu2D(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size=3,  stride=1, padding='SAME', bias=True, dilation=1):
-        super(ConvBatchNormRelu, self).__init__()
+        super(ConvBatchNormRelu2D, self).__init__()
 
         if padding == 'SAME':
             p = kernel_size // 2
@@ -24,9 +24,9 @@ class ConvBatchNormRelu(nn.Module):
         return outputs
 
 # 2D convolution layer with group normalization and relu activation
-class ConvGroupNormRelu(nn.Module):
+class ConvGroupNormRelu2D(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size=3,  stride=1, padding='SAME', bias=True, dilation=1):
-        super(ConvGroupNormRelu, self).__init__()
+        super(ConvGroupNormRelu2D, self).__init__()
 
         if padding == 'SAME':
             p = kernel_size // 2
@@ -43,17 +43,17 @@ class ConvGroupNormRelu(nn.Module):
         return outputs
 
 # 2D convolution block of the classical unet
-class UNetConvBlock(nn.Module):
+class UNetConvBlock2D(nn.Module):
 
     def __init__(self, in_channels, out_channels, kernel_size=3, padding='SAME', group_norm=True):
-        super(UNetConvBlock, self).__init__()
+        super(UNetConvBlock2D, self).__init__()
 
         if group_norm:
-            self.conv1 = ConvGroupNormRelu(in_channels, out_channels, kernel_size=kernel_size, padding=padding)
-            self.conv2 = ConvGroupNormRelu(out_channels, out_channels, kernel_size=kernel_size, padding=padding)
+            self.conv1 = ConvGroupNormRelu2D(in_channels, out_channels, kernel_size=kernel_size, padding=padding)
+            self.conv2 = ConvGroupNormRelu2D(out_channels, out_channels, kernel_size=kernel_size, padding=padding)
         else:
-            self.conv1 = ConvBatchNormRelu(in_channels, out_channels, kernel_size=kernel_size, padding=padding)
-            self.conv2 = ConvBatchNormRelu(out_channels, out_channels, kernel_size=kernel_size, padding=padding)
+            self.conv1 = ConvBatchNormRelu2D(in_channels, out_channels, kernel_size=kernel_size, padding=padding)
+            self.conv2 = ConvBatchNormRelu2D(out_channels, out_channels, kernel_size=kernel_size, padding=padding)
 
     def forward(self, inputs):
         outputs = self.conv1(inputs)
@@ -62,10 +62,10 @@ class UNetConvBlock(nn.Module):
 
 # 2D upsampling block of the classical unet:
 # upsamples the input and concatenates with another input
-class UNetUpSamplingBlock(nn.Module):
+class UNetUpSamplingBlock2D(nn.Module):
 
     def __init__(self, in_channels, out_channels, deconv=False, bias=True):
-        super(UNetUpSamplingBlock, self).__init__()
+        super(UNetUpSamplingBlock2D, self).__init__()
 
         if deconv: # use transposed convolution
             self.up = nn.ConvTranspose2d(in_channels, out_channels, kernel_size=2, stride=2, bias=bias)

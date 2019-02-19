@@ -73,8 +73,10 @@ class RandomDeformations(object):
             self.seed = 0
         if rnd.rand() < self.prob:
             s = rnd.randint(0,2**32)
-            self.augmenter.reseed(s)
-            x_aug = self.augmenter.augment_images(x.copy())
+            x_aug = np.zeros_like(x)
+            for i in range(x.shape[0]):
+                self.augmenter.reseed(s)
+                x_aug[i:i+1,...] = self.augmenter.augment_images(x[i:i+1,...].copy())
             if self.thr:
                 x_aug = np.asarray(x_aug>0.5, float) # avoid weird noise artifacts
             return x_aug
@@ -156,7 +158,7 @@ class FlipZ(object):
         if self.seed == 2**32:
             self.seed = 0
         if rnd.rand()<self.prob:
-            return x[:,:,:,::-1]
+            return x[::-1,:,:]
         else:
             return x
 
@@ -166,7 +168,7 @@ class Flatten(object):
 
         return x.view(-1)
 
-def get_augmenters():
+def get_augmenters_2d(augment_noise=True):
     # standard augmenters: rotation, flips, deformations
 
     # generate seeds for synchronized augmentation
@@ -176,12 +178,19 @@ def get_augmenters():
     s4 = np.random.randint(0, 2 ** 32)
 
     # define transforms
-    train_xtransform = transforms.Compose([Rotate90(seed=s1),
-                                           FlipX(seed=s2),
-                                           FlipY(seed=s3),
-                                           RandomDeformations(seed=s4),
-                                           AddNoise(sigma_max=0.1),
-                                           ToFloatTensor()])
+    if augment_noise:
+        train_xtransform = transforms.Compose([Rotate90(seed=s1),
+                                               FlipX(seed=s2),
+                                               FlipY(seed=s3),
+                                               RandomDeformations(seed=s4),
+                                               AddNoise(sigma_max=0.2),
+                                               ToFloatTensor()])
+    else:
+        train_xtransform = transforms.Compose([Rotate90(seed=s1),
+                                               FlipX(seed=s2),
+                                               FlipY(seed=s3),
+                                               RandomDeformations(seed=s4),
+                                               ToFloatTensor()])
     train_ytransform = transforms.Compose([Rotate90(seed=s1),
                                            FlipX(seed=s2),
                                            FlipY(seed=s3),

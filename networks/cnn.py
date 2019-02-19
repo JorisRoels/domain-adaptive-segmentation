@@ -2,7 +2,7 @@
 import torch.nn as nn
 import torch.nn.functional as F
 
-from networks.blocks import ConvBatchNormRelu, ConvGroupNormRelu
+from networks.blocks import ConvBatchNormRelu2D, ConvGroupNormRelu2D
 
 # classical convolutional neural network implementation
 class CNN(nn.Module):
@@ -23,9 +23,9 @@ class CNN(nn.Module):
         data_size = input_size[1]
         for i, out_channels in enumerate(conv_channels):
             if group_norm:
-                self.conv_features.add_module('conv%d' % (i + 1), ConvGroupNormRelu(in_channels, out_channels, kernel_size=kernel_size))
+                self.conv_features.add_module('conv%d' % (i + 1), ConvGroupNormRelu2D(in_channels, out_channels, kernel_size=kernel_size))
             else:
-                self.conv_features.add_module('conv%d' % (i + 1), ConvBatchNormRelu(in_channels, out_channels, kernel_size=kernel_size))
+                self.conv_features.add_module('conv%d' % (i + 1), ConvBatchNormRelu2D(in_channels, out_channels, kernel_size=kernel_size))
             in_channels = out_channels
             data_size /= 2
 

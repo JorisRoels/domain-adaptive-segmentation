@@ -8,7 +8,7 @@ import torch.nn.functional as F
 import torchvision.utils as vutils
 from tensorboardX import SummaryWriter
 
-from networks.unet import UNetEncoder, UNetDecoder, UNet, unet_from_encoder_decoder
+from networks.unet import UNetEncoder2D, UNetDecoder2D, unet_from_encoder_decoder
 
 # CORAL U-Net model
 class UNet_CORAL(nn.Module):
@@ -22,10 +22,10 @@ class UNet_CORAL(nn.Module):
         self.levels = levels
 
         # encoder
-        self.encoder = UNetEncoder(in_channels=in_channels, feature_maps=feature_maps, levels=levels, group_norm=group_norm)
+        self.encoder = UNetEncoder2D(in_channels=in_channels, feature_maps=feature_maps, levels=levels, group_norm=group_norm)
 
         # segmentation decoder
-        self.segmentation_decoder = UNetDecoder(out_channels=out_channels, feature_maps=feature_maps, levels=levels, group_norm=group_norm)
+        self.segmentation_decoder = UNetDecoder2D(out_channels=out_channels, feature_maps=feature_maps, levels=levels, group_norm=group_norm)
 
     def forward(self, inputs):
 
@@ -59,10 +59,10 @@ class UNet_CORAL(nn.Module):
         self.train()
 
         # keep track of the average loss during the epoch
-        loss_cum = 0.0
+        loss_seg_cum = 0.0
         losses_coral_cum = np.zeros(len(lambdas))
         total_loss_coral_cum = 0.0
-        total_loss_cum = 0.0
+        loss_cum = 0.0
         cnt = 0
 
         # list of the target data
@@ -83,7 +83,7 @@ class UNet_CORAL(nn.Module):
             tar_features, y_tar_pred = self(x_tar)
 
             # compute loss
-            loss = loss_fn(y_src_pred, y_src)
+            loss_seg = loss_fn(y_src_pred, y_src)
             total_loss_coral = 0
             for j, lambda_coral in enumerate(lambdas):
                 if lambda_coral>0:
@@ -95,40 +95,41 @@ class UNet_CORAL(nn.Module):
                                            f_j_tar[:,s,:,:].view(sz[0],sz[2]*sz[3]))
                         losses_coral_cum[j] = losses_coral_cum[j] + loss_coral.data.cpu().numpy()
                         total_loss_coral = total_loss_coral + lambda_coral*loss_coral
-            total_loss = loss + total_loss_coral
-            loss_cum += loss.data.cpu().numpy()
+            loss = loss_seg + total_loss_coral
+            loss_seg_cum += loss_seg.data.cpu().numpy()
             total_loss_coral_cum += total_loss_coral.data.cpu().numpy()
-            total_loss_cum += total_loss.data.cpu().numpy()
+            loss_cum += loss.data.cpu().numpy()
             cnt += 1
 
             # backward prop
-            total_loss.backward()
+            loss.backward()
 
             # apply one step in the optimization
             optimizer.step()
 
             # print statistics of necessary
             if i % print_stats == 0:
-                print('[%s] Epoch %5d - Iteration %5d/%5d - Loss: %.6f - Loss CORAL: %.6f - Total loss: %.6f'
-                      % (datetime.datetime.now(), epoch, i, len(loader_src.dataset), loss, total_loss_coral, total_loss))
+                print('[%s] Epoch %5d - Iteration %5d/%5d - Loss seg: %.6f - Loss CORAL: %.6f - Loss: %.6f'
+                      % (datetime.datetime.now(), epoch, i, len(loader_src.dataset)/loader_src.batch_size, loss, total_loss_coral, loss))
 
         # don't forget to compute the average and print it
-        loss_avg = loss_cum / cnt
+        loss_seg_avg = loss_seg_cum / cnt
         losses_coral_avg = losses_coral_cum / cnt
         total_loss_coral_avg = total_loss_coral_cum / cnt
-        total_loss_avg = total_loss_cum / cnt
-        print('[%s] Epoch %5d - Train averages: Loss: %.6f - Loss CORAL: %.6f - Total loss: %.6f'
-              % (datetime.datetime.now(), epoch, loss_avg, total_loss_coral_avg, total_loss_avg))
+        loss_avg = loss_cum / cnt
+        print('[%s] Epoch %5d - Loss seg: %.6f - Loss CORAL: %.6f - Loss: %.6f'
+              % (datetime.datetime.now(), epoch, loss_seg_avg, total_loss_coral_avg, loss_avg))
+
+        # scalars
+        writer.add_scalar('train-src/loss-seg', loss_seg_avg, epoch)
+        for i in range(len(lambdas)):
+            if lambdas[i]>0:
+                writer.add_scalar('train/loss-coral-level-' + str(i), losses_coral_avg[i], epoch)
+        writer.add_scalar('train/loss-coral', total_loss_coral_avg, epoch)
+        writer.add_scalar('train/loss', loss_avg, epoch)
 
         # log everything
         if writer is not None:
-
-            # always log scalars
-            writer.add_scalar('train/loss', loss_avg, epoch)
-            for i in range(len(lambdas)):
-                writer.add_scalar('train/loss_coral_level_' + str(i), losses_coral_avg[i], epoch)
-            writer.add_scalar('train/total_loss_coral', total_loss_coral_avg, epoch)
-            writer.add_scalar('train/total_loss', total_loss_avg, epoch)
 
             if write_images:
                 # write images
@@ -137,12 +138,15 @@ class UNet_CORAL(nn.Module):
                 y_src = vutils.make_grid(y_src, normalize=y_src.max() - y_src.min() > 0, scale_each=True)
                 y_src_pred = vutils.make_grid(F.softmax(y_src_pred, dim=1)[:, 1:2, :, :].data,
                                               normalize=y_src_pred.max() - y_src_pred.min() > 0, scale_each=True)
-                writer.add_image('train/x_src', x_src, epoch)
-                writer.add_image('train/x_tar', x_tar, epoch)
-                writer.add_image('train/y_src', y_src, epoch)
-                writer.add_image('train/y_src_pred', y_src_pred, epoch)
+                y_tar_pred = vutils.make_grid(F.softmax(y_tar_pred, dim=1)[:, 1:2, :, :].data,
+                                              normalize=y_tar_pred.max() - y_tar_pred.min() > 0, scale_each=True)
+                writer.add_image('train-src/x', x_src, epoch)
+                writer.add_image('train-tar/x', x_tar, epoch)
+                writer.add_image('train-src/y', y_src, epoch)
+                writer.add_image('train-src/y-pred', y_src_pred, epoch)
+                writer.add_image('train-tar/y-pred', y_tar_pred, epoch)
 
-        return total_loss_avg
+        return loss_avg
 
     # tests the network over one epoch
     def test_epoch(self, loader_src, loader_tar, loss_fn, lambdas, epoch, writer=None, write_images=False):
@@ -152,11 +156,11 @@ class UNet_CORAL(nn.Module):
         self.eval()
 
         # keep track of the average loss during the epoch
-        loss_cum = 0.0
+        loss_seg_src_cum = 0.0
+        loss_seg_tar_cum = 0.0
         losses_coral_cum = np.zeros(len(lambdas))
         total_loss_coral_cum = 0.0
-        total_loss_cum = 0.0
-        loss_tar_cum = 0.0
+        loss_cum = 0.0
         cnt = 0
 
         # list of the target data
@@ -174,7 +178,8 @@ class UNet_CORAL(nn.Module):
             tar_features, y_tar_pred = self(x_tar)
 
             # compute loss
-            loss = loss_fn(y_src_pred, y_src)
+            loss_seg_src = loss_fn(y_src_pred, y_src)
+            loss_seg_tar = loss_fn(y_tar_pred, y_tar)
             total_loss_coral = 0
             for j, lambda_coral in enumerate(lambdas):
                 if lambda_coral>0:
@@ -186,51 +191,51 @@ class UNet_CORAL(nn.Module):
                                            f_j_tar[:,s,:,:].view(sz[0],sz[2]*sz[3]))
                         losses_coral_cum[j] = losses_coral_cum[j] + loss_coral.data.cpu().numpy()
                         total_loss_coral = total_loss_coral + lambda_coral*loss_coral
-            total_loss = loss + total_loss_coral
-            loss_cum += loss.data.cpu().numpy()
+            loss = loss_seg_src + total_loss_coral
+            loss_seg_src_cum += loss_seg_src.data.cpu().numpy()
+            loss_seg_tar_cum += loss_seg_tar.data.cpu().numpy()
             total_loss_coral_cum += total_loss_coral.data.cpu().numpy()
-            total_loss_cum += total_loss.data.cpu().numpy()
-            cnt += 1
-
-        # test loss on target
-        cnt = 0
-        for i, data in enumerate(loader_tar):
-
-            # get the inputs
-            x, y = data[0].cuda(), data[1].cuda()
-
-            # forward prop
-            _, y_pred = self(x)
-
-            # compute loss
-            loss = loss_fn(y_pred, y)
-            loss_tar_cum += loss.data.cpu().numpy()
+            loss_cum += loss.data.cpu().numpy()
             cnt += 1
 
         # don't forget to compute the average and print it
-        loss_avg = total_loss_cum / cnt
-        loss_tar_avg = loss_tar_cum / cnt
-        print('[%s] Epoch %5d - Average test loss: %.6f - Average test loss on target: %.6f'
-              % (datetime.datetime.now(), epoch, loss_avg, loss_tar_avg))
+        loss_seg_src_avg = loss_seg_src_cum / cnt
+        loss_seg_tar_avg = loss_seg_tar_cum / cnt
+        losses_coral_avg = losses_coral_cum / cnt
+        total_loss_coral_avg = total_loss_coral_cum / cnt
+        loss_avg = loss_cum / cnt
+        print('[%s] Epoch %5d - Loss seg src: %.6f - Loss seg tar: %.6f - Loss CORAL: %.6f - Loss: %.6f'
+              % (datetime.datetime.now(), epoch, loss_seg_src_avg, loss_seg_tar_avg, total_loss_coral_avg, loss_avg))
+
+        # scalars
+        writer.add_scalar('test-src/loss-seg', loss_seg_src_avg, epoch)
+        writer.add_scalar('test-tar/loss-seg', loss_seg_tar_avg, epoch)
+        for i in range(len(lambdas)):
+            if lambdas[i]>0:
+                writer.add_scalar('test/loss-coral-level-' + str(i), losses_coral_avg[i], epoch)
+        writer.add_scalar('test/loss-coral', total_loss_coral_avg, epoch)
+        writer.add_scalar('test/loss', loss_avg, epoch)
 
         # log everything
-        if writer is not None:
+        if writer is not None and write_images:
 
-            # always log scalars
-            writer.add_scalar('test/loss', loss_avg, epoch)
-            writer.add_scalar('test/loss_target', loss_tar_avg, epoch)
+            # images
+            xs = vutils.make_grid(x_src, normalize=True, scale_each=True)
+            xt = vutils.make_grid(x_tar, normalize=True, scale_each=True)
+            ys = vutils.make_grid(y_src, normalize=y_src.max() - y_src.min() > 0, scale_each=True)
+            yt = vutils.make_grid(y_tar, normalize=y_tar.max() - y_tar.min() > 0, scale_each=True)
+            ys_pred = vutils.make_grid(F.softmax(y_src_pred, dim=1)[:, 1:2, :, :].data,
+                                       normalize=y_src_pred.max() - y_src_pred.min() > 0, scale_each=True)
+            yt_pred = vutils.make_grid(F.softmax(y_tar_pred, dim=1)[:, 1:2, :, :].data,
+                                       normalize=y_tar_pred.max() - y_tar_pred.min() > 0, scale_each=True)
+            writer.add_image('test-src/x', xs, epoch)
+            writer.add_image('test-tar/x', xt, epoch)
+            writer.add_image('test-src/y', ys, epoch)
+            writer.add_image('test-tar/y', yt, epoch)
+            writer.add_image('test-src/y-pred', ys_pred, epoch)
+            writer.add_image('test-tar/y-pred', yt_pred, epoch)
 
-            if write_images:
-                # write images
-                x_tar = vutils.make_grid(x_tar, normalize=True, scale_each=True)
-                y_tar = vutils.make_grid(y_tar, normalize=y_tar.max() - y_tar.min() > 0, scale_each=True)
-                y_tar_pred = vutils.make_grid(F.softmax(y_tar_pred, dim=1)[:, 1:2, :, :].data,
-                                              normalize=y_tar_pred.max() - y_tar_pred.min() > 0, scale_each=True)
-                writer.add_image('test/x_tar', x_tar, epoch)
-                writer.add_image('test/y_tar', y_tar, epoch)
-                writer.add_image('test/y_tar_pred', y_tar_pred, epoch)
-
-        return loss_avg, loss_tar_avg
+        return loss_avg
 
     # trains the network
     def train_net(self, train_loader_source, test_loader_source, train_loader_target, test_loader_target, loss_fn, lambdas, optimizer,
@@ -261,13 +266,13 @@ class UNet_CORAL(nn.Module):
 
             # test the model for one epoch is necessary
             if epoch % test_freq == 0:
-                test_loss, test_loss_tar = self.test_epoch(loader_src=test_loader_source, loader_tar=test_loader_target,
-                                                           loss_fn=loss_fn, lambdas=lambdas, epoch=epoch,
-                                                           writer=writer, write_images=True)
+                test_loss = self.test_epoch(loader_src=test_loader_source, loader_tar=test_loader_target,
+                                            loss_fn=loss_fn, lambdas=lambdas, epoch=epoch,
+                                            writer=writer, write_images=True)
 
                 # and save model if lower test loss is found
-                if test_loss_tar < test_loss_min:
-                    test_loss_min = test_loss_tar
+                if test_loss < test_loss_min:
+                    test_loss_min = test_loss
                     torch.save(self, os.path.join(log_dir, 'best_checkpoint.pytorch'))
 
             # save model every epoch

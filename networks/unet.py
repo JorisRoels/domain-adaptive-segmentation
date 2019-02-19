@@ -5,16 +5,18 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torch.optim as optim
 import torchvision.utils as vutils
 from tensorboardX import SummaryWriter
 
-from networks.blocks import UNetConvBlock, UNetUpSamplingBlock
+from networks.blocks import UNetConvBlock2D, UNetUpSamplingBlock2D
+from util.metrics import jaccard, accuracy_metrics
 
 # original 2D unet encoder
-class UNetEncoder(nn.Module):
+class UNetEncoder2D(nn.Module):
 
     def __init__(self, in_channels=1, feature_maps=64, levels=4, group_norm=True):
-        super(UNetEncoder, self).__init__()
+        super(UNetEncoder2D, self).__init__()
 
         self.in_channels = in_channels
         self.feature_maps = feature_maps
@@ -26,7 +28,7 @@ class UNetEncoder(nn.Module):
             out_features = (2**i) * feature_maps
 
             # convolutional block
-            conv_block = UNetConvBlock(in_features, out_features, group_norm=group_norm)
+            conv_block = UNetConvBlock2D(in_features, out_features, group_norm=group_norm)
             self.features.add_module('convblock%d' % (i + 1), conv_block)
 
             # pooling
@@ -37,7 +39,7 @@ class UNetEncoder(nn.Module):
             in_features = out_features
 
         # center (lowest) block
-        self.center_conv = UNetConvBlock(2**(levels-1) * feature_maps, 2**levels * feature_maps)
+        self.center_conv = UNetConvBlock2D(2**(levels-1) * feature_maps, 2**levels * feature_maps, group_norm=group_norm)
 
     def forward(self, inputs):
 
@@ -54,11 +56,12 @@ class UNetEncoder(nn.Module):
         return encoder_outputs, outputs
 
 # original 2D unet decoder
-class UNetDecoder(nn.Module):
+class UNetDecoder2D(nn.Module):
 
-    def __init__(self, out_channels=2, feature_maps=64, levels=4, skip_connections=True, group_norm=True):
-        super(UNetDecoder, self).__init__()
+    def __init__(self, in_channels=1, out_channels=2, feature_maps=64, levels=4, skip_connections=True, group_norm=True):
+        super(UNetDecoder2D, self).__init__()
 
+        self.in_channels = in_channels
         self.out_channels = out_channels
         self.feature_maps = feature_maps
         self.levels = levels
@@ -68,14 +71,14 @@ class UNetDecoder(nn.Module):
         for i in range(levels):
 
             # upsampling block
-            upconv = UNetUpSamplingBlock(2**(levels-i) * feature_maps, 2**(levels-i-1) * feature_maps, deconv=True)
+            upconv = UNetUpSamplingBlock2D(2**(levels-i) * feature_maps, 2**(levels-i-1) * feature_maps, deconv=True)
             self.features.add_module('upconv%d' % (i + 1), upconv)
 
             # convolutional block
             if skip_connections:
-                conv_block = UNetConvBlock(2**(levels-i) * feature_maps, 2**(levels-i-1) * feature_maps, group_norm=group_norm)
+                conv_block = UNetConvBlock2D(2**(levels-i) * feature_maps, 2**(levels-i-1) * feature_maps, group_norm=group_norm)
             else:
-                conv_block = UNetConvBlock(2**(levels-i-1) * feature_maps, 2**(levels-i-1) * feature_maps, group_norm=group_norm)
+                conv_block = UNetConvBlock2D(2**(levels-i-1) * feature_maps, 2**(levels-i-1) * feature_maps, group_norm=group_norm)
             self.features.add_module('convblock%d' % (i + 1), conv_block)
 
         # output layer
@@ -90,29 +93,32 @@ class UNetDecoder(nn.Module):
         outputs = inputs
         for i in range(self.levels):
             if self.skip_connections:
-                outputs = getattr(self.features,'upconv%d' % (i + 1))(encoder_outputs[i], outputs)  # also deals with concat
+                outputs = getattr(self.features, 'upconv%d' % (i + 1))(encoder_outputs[i], outputs)  # also deals with concat
             else:
-                outputs = getattr(self.features,'upconv%d' % (i + 1))(outputs)  # no concat
+                outputs = getattr(self.features, 'upconv%d' % (i + 1))(outputs)  # no concat
             outputs = getattr(self.features, 'convblock%d' % (i + 1))(outputs)
             decoder_outputs.append(outputs)
 
-        return decoder_outputs, self.output(outputs)
+        outputs = self.output(outputs)
+
+        return decoder_outputs, outputs
 
 # original 2D unet model
-class UNet(nn.Module):
+class UNet2D(nn.Module):
 
-    def __init__(self, in_channels=1, out_channels=2, feature_maps=64, levels=4, group_norm=True):
-        super(UNet, self).__init__()
+    def __init__(self, in_channels=1, out_channels=2, feature_maps=64, levels=4, group_norm=False, skip_connections=True):
+        super(UNet2D, self).__init__()
 
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.feature_maps = feature_maps
         self.levels = levels
+        self.group_norm = group_norm
 
         # contractive path
-        self.encoder = UNetEncoder(in_channels, feature_maps=feature_maps, levels=levels, group_norm=group_norm)
+        self.encoder = UNetEncoder2D(in_channels, feature_maps=feature_maps, levels=levels, group_norm=group_norm)
         # expansive path
-        self.decoder = UNetDecoder(out_channels, feature_maps=feature_maps, levels=levels, skip_connections=True, group_norm=group_norm)
+        self.decoder = UNetDecoder2D(in_channels, out_channels, feature_maps=feature_maps, levels=levels, skip_connections=skip_connections, group_norm=group_norm)
 
     def forward(self, inputs):
 
@@ -123,10 +129,6 @@ class UNet(nn.Module):
         decoder_outputs, outputs = self.decoder(final_output, encoder_outputs)
 
         return outputs
-
-    # returns the basic segmentation network
-    def get_segmentation_net(self):
-        return self
 
     # trains the network for one epoch
     def train_epoch(self, loader, loss_fn, optimizer, epoch, print_stats=1, writer=None, write_images=False):
@@ -165,7 +167,7 @@ class UNet(nn.Module):
             # print statistics if necessary
             if i % print_stats == 0:
                 print('[%s] Epoch %5d - Iteration %5d/%5d - Loss: %.6f'
-                      % (datetime.datetime.now(), epoch, i, len(loader.dataset), loss))
+                      % (datetime.datetime.now(), epoch, i, len(loader.dataset)/loader.batch_size, loss))
 
         # don't forget to compute the average and print it
         loss_avg = loss_cum / cnt
@@ -176,7 +178,7 @@ class UNet(nn.Module):
         if writer is not None:
 
             # always log scalars
-            writer.add_scalar('train/loss', loss_avg, epoch)
+            writer.add_scalar('train/loss-seg', loss_avg, epoch)
 
             if write_images:
                 # write images
@@ -190,19 +192,23 @@ class UNet(nn.Module):
         return loss_avg
 
     # tests the network over one epoch
-    def test_epoch(self, loader_src, loader_tar, loss_fn, epoch, writer=None, write_images=False):
+    def test_epoch(self, loader, loss_fn, epoch, writer=None, write_images=False):
 
         # make sure network is on the gpu and in training mode
         self.cuda()
         self.eval()
 
-        # keep track of the average loss during the epoch
+        # keep track of the average loss and metrics during the epoch
         loss_cum = 0.0
-        loss_tar_cum = 0.0
+        j_cum = 0.0
+        a_cum = 0.0
+        p_cum = 0.0
+        r_cum = 0.0
+        f_cum = 0.0
         cnt = 0
 
         # test loss
-        for i, data in enumerate(loader_src):
+        for i, data in enumerate(loader):
 
             # get the inputs
             x, y = data[0].cuda(), data[1].cuda()
@@ -215,37 +221,32 @@ class UNet(nn.Module):
             loss_cum += loss.data.cpu().numpy()
             cnt += 1
 
-        # test loss on target
-        if loader_tar is not None:
-            cnt = 0
-            for i, data in enumerate(loader_tar):
-
-                # get the inputs
-                x, y = data[0].cuda(), data[1].cuda()
-
-                # forward prop
-                y_pred = self(x)
-
-                # compute loss
-                loss = loss_fn(y_pred, y)
-                loss_tar_cum += loss.data.cpu().numpy()
-                cnt += 1
-        else:
-            loss_tar_cum = loss_cum
+            # compute other interesting metrics
+            y_ = F.softmax(y_pred, dim=1).data.cpu().numpy()[:,1,...]
+            j_cum += jaccard(y_, y.cpu().numpy())
+            a, p, r, f = accuracy_metrics(y_, y.cpu().numpy())
+            a_cum += a; p_cum += p; r_cum += r; f_cum += f
 
         # don't forget to compute the average and print it
         loss_avg = loss_cum / cnt
-        loss_tar_avg = loss_tar_cum / cnt
-        print('[%s] Epoch %5d - Average test loss: %.6f - Average test loss on target: %.6f'
-              % (datetime.datetime.now(), epoch, loss_avg, loss_tar_avg))
+        j_avg = j_cum / cnt
+        a_avg = a_cum / cnt
+        p_avg = p_cum / cnt
+        r_avg = r_cum / cnt
+        f_avg = f_cum / cnt
+        print('[%s] Epoch %5d - Average test loss: %.6f'
+              % (datetime.datetime.now(), epoch, loss_avg))
 
         # log everything
         if writer is not None:
 
             # always log scalars
-            writer.add_scalar('test/loss', loss_avg, epoch)
-            writer.add_scalar('test/loss_target', loss_tar_avg, epoch)
-
+            writer.add_scalar('test/loss-seg', loss_avg, epoch)
+            writer.add_scalar('test/jaccard', j_avg, epoch)
+            writer.add_scalar('test/accuracy', a_avg, epoch)
+            writer.add_scalar('test/precision', p_avg, epoch)
+            writer.add_scalar('test/recall', r_avg, epoch)
+            writer.add_scalar('test/f-score', f_avg, epoch)
             if write_images:
                 # write images
                 x = vutils.make_grid(x, normalize=True, scale_each=True)
@@ -255,10 +256,10 @@ class UNet(nn.Module):
                 writer.add_image('test/y', y, epoch)
                 writer.add_image('test/y_pred', y_pred, epoch)
 
-        return loss_avg, loss_tar_avg
+        return loss_avg
 
     # trains the network
-    def train_net(self, train_loader_src, test_loader_src, test_loader_tar, loss_fn, optimizer, scheduler=None, epochs=100, test_freq=1, print_stats=1, log_dir=None, write_images_freq=1):
+    def train_net(self, train_loader, test_loader, loss_fn, lr=1e-3, step_size=1, gamma=1, epochs=100, test_freq=1, print_stats=1, log_dir=None, write_images_freq=1):
 
         # log everything if necessary
         if log_dir is not None:
@@ -266,13 +267,16 @@ class UNet(nn.Module):
         else:
             writer = None
 
+        optimizer = optim.Adam(self.parameters(), lr=lr)
+        scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=step_size, gamma=gamma)
+
         test_loss_min = np.inf
         for epoch in range(epochs):
 
             print('[%s] Epoch %5d/%5d' % (datetime.datetime.now(), epoch, epochs))
 
             # train the model for one epoch
-            self.train_epoch(loader=train_loader_src, loss_fn=loss_fn, optimizer=optimizer, epoch=epoch,
+            self.train_epoch(loader=train_loader, loss_fn=loss_fn, optimizer=optimizer, epoch=epoch,
                              print_stats=print_stats, writer=writer, write_images=epoch % write_images_freq == 0)
 
             # adjust learning rate if necessary
@@ -284,11 +288,11 @@ class UNet(nn.Module):
 
             # test the model for one epoch is necessary
             if epoch % test_freq == 0:
-                test_loss, test_loss_tar = self.test_epoch(loader_src=test_loader_src, loader_tar=test_loader_tar, loss_fn=loss_fn, epoch=epoch, writer=writer, write_images=True)
+                test_loss = self.test_epoch(loader=test_loader, loss_fn=loss_fn, epoch=epoch, writer=writer, write_images=True)
 
                 # and save model if lower test loss is found
-                if test_loss_tar < test_loss_min:
-                    test_loss_min = test_loss_tar
+                if test_loss < test_loss_min:
+                    test_loss_min = test_loss
                     torch.save(self, os.path.join(log_dir, 'best_checkpoint.pytorch'))
 
             # save model every epoch
@@ -299,7 +303,7 @@ class UNet(nn.Module):
 # returns a unet model from a given encoder and decoder
 def unet_from_encoder_decoder(encoder, decoder):
 
-    net = UNet(in_channels=encoder.in_channels, out_channels=decoder.out_channels, feature_maps=encoder.feature_maps, levels=encoder.levels)
+    net = UNet2D(in_channels=encoder.in_channels, out_channels=decoder.out_channels, feature_maps=encoder.feature_maps, levels=encoder.levels)
 
     net.encoder = encoder
     net.decoder = decoder
