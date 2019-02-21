@@ -120,7 +120,7 @@ class UNetDecoder(nn.Module):
 # original 2D unet model
 class UNetAE(nn.Module):
 
-    def __init__(self, in_channels=1, out_channels=1, feature_maps=64, levels=4, group_norm=False, lambda_rec=0, s=128):
+    def __init__(self, in_channels=1, out_channels=1, feature_maps=64, levels=4, group_norm=False, lambda_dom=0, s=128):
         super(UNetAE, self).__init__()
 
         self.in_channels = in_channels
@@ -128,7 +128,7 @@ class UNetAE(nn.Module):
         self.feature_maps = feature_maps
         self.levels = levels
         self.group_norm = group_norm
-        self.lambda_rec = lambda_rec
+        self.lambda_dom = lambda_dom
 
         # contractive path
         self.encoder = UNetEncoder(in_channels, feature_maps=feature_maps, levels=levels, group_norm=group_norm)
@@ -195,7 +195,7 @@ class UNetAE(nn.Module):
             # compute loss
             loss_rec = loss_fn(y_pred, x)
             loss_dom = loss_dom_fn(dom_pred, dom)
-            loss = loss_rec + self.lambda_rec*loss_dom
+            loss = loss_rec + self.lambda_dom*loss_dom
             loss_rec_cum += loss_rec.data.cpu().numpy()
             loss_dom_cum += loss_dom.data.cpu().numpy()
             loss_cum += loss.data.cpu().numpy()
@@ -272,7 +272,7 @@ class UNetAE(nn.Module):
             # compute loss
             loss_rec = loss_fn(y_pred, x)
             loss_dom = loss_dom_fn(dom_pred, dom)
-            loss = loss_rec + self.lambda_rec*loss_dom
+            loss = loss_rec + self.lambda_dom*loss_dom
             loss_rec_cum += loss_rec.data.cpu().numpy()
             loss_dom_cum += loss_dom.data.cpu().numpy()
             loss_cum += loss.data.cpu().numpy()

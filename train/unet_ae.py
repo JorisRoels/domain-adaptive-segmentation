@@ -40,7 +40,7 @@ parser.add_argument("--fm", help="Number of initial feature maps in the segmenta
 parser.add_argument("--levels", help="Number of levels in the segmentation U-Net (i.e. number of pooling stages)", type=int, default=4)
 parser.add_argument("--group_norm", help="Use group normalization instead of batch normalization", type=int, default=0)
 parser.add_argument("--augment_noise", help="Use noise augmentation", type=int, default=0)
-parser.add_argument("--lambda_rec", help="Confusion loss regularization", type=float, default=1e-2)
+parser.add_argument("--lambda_dom", help="Confusion loss regularization", type=float, default=1e-3)
 
 # optimization parameters
 parser.add_argument("--lr", help="Learning rate of the optimization", type=float, default=1e-3)
@@ -89,7 +89,7 @@ tar_test_loader = DataLoader(tar_test, batch_size=args.test_batch_size//2)
     Setup optimization for unsupervised training
 """
 print('[%s] Setting up optimization for unsupervised training' % (datetime.datetime.now()))
-net = UNetAE(feature_maps=args.fm, levels=args.levels, group_norm=(args.group_norm == 1), lambda_rec=args.lambda_rec, s=args.input_size[0])
+net = UNetAE(feature_maps=args.fm, levels=args.levels, group_norm=(args.group_norm == 1), lambda_dom=args.lambda_dom, s=args.input_size[0])
 
 """
     Train the network unsupervised
