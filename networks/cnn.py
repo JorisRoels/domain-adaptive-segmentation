@@ -7,7 +7,7 @@ from networks.blocks import ConvBatchNormRelu2D, ConvGroupNormRelu2D
 # classical convolutional neural network implementation
 class CNN(nn.Module):
 
-    def __init__(self, input_size, conv_channels, fc_channels, kernel_size=3, group_norm=True):
+    def __init__(self, input_size, conv_channels, fc_channels, kernel_size=3, group_norm=False):
         super(CNN, self).__init__()
 
         self.input_size = input_size

@@ -6,11 +6,13 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.autograd import Function
+import torch.nn.functional as F
 import torchvision.utils as vutils
 from tensorboardX import SummaryWriter
 
 from networks.blocks import UNetConvBlock2D, UNetUpSamplingBlock2D
 from networks.cnn import CNN
+from networks.unet import unet_from_encoder_decoder
 
 # gradient reversal
 class ReverseLayerF(Function):
@@ -118,10 +120,10 @@ class UNetDecoder(nn.Module):
         return decoder_outputs, outputs
 
 # original 2D unet model
-class UNetAE(nn.Module):
+class YNetAE(nn.Module):
 
-    def __init__(self, in_channels=1, out_channels=1, feature_maps=64, levels=4, group_norm=False, lambda_rec=0, s=128):
-        super(UNetAE, self).__init__()
+    def __init__(self, in_channels=1, out_channels=2, feature_maps=64, levels=4, group_norm=False, lambda_rec=0, lambda_dom=0, s=128):
+        super(YNetAE, self).__init__()
 
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -129,11 +131,16 @@ class UNetAE(nn.Module):
         self.levels = levels
         self.group_norm = group_norm
         self.lambda_rec = lambda_rec
+        self.lambda_dom = lambda_dom
 
-        # contractive path
-        self.encoder = UNetEncoder(in_channels, feature_maps=feature_maps, levels=levels, group_norm=group_norm)
-        # expansive path
-        self.decoder = UNetDecoder(in_channels, out_channels, feature_maps=feature_maps, levels=levels, skip_connections=False, group_norm=group_norm)
+        # encoder
+        self.encoder = UNetEncoder(in_channels=in_channels, feature_maps=feature_maps, levels=levels, group_norm=group_norm)
+
+        # segmentation decoder
+        self.segmentation_decoder = UNetDecoder(out_channels=out_channels, feature_maps=feature_maps, levels=levels, group_norm=group_norm)
+
+        # reconstruction decoder
+        self.reconstruction_decoder = UNetDecoder(out_channels=in_channels, feature_maps=feature_maps, levels=levels, group_norm=group_norm, skip_connections=False)
 
         # domain classifier on the latent encoding (fixed network architecture)
         n = s//(2**levels)
@@ -142,22 +149,29 @@ class UNetAE(nn.Module):
         fc_channels = [48, 24, 2]
         self.domain_classifier = CNN(input_size=(fm, n, n), conv_channels=conv_channels, fc_channels=fc_channels)
 
-
     def forward(self, inputs):
 
-        # contractive path
-        encoder_outputs, final_output, reverse_outputs = self.encoder(inputs)
+        # encoder
+        encoder_outputs, encoded, reverse_outputs = self.encoder(inputs)
 
         # domain prediction
         domain = self.domain_classifier(reverse_outputs)
 
-        # expansive path
-        decoder_outputs, outputs = self.decoder(final_output, encoder_outputs)
+        # segmentation decoder
+        _, segmentation_outputs = self.segmentation_decoder(encoded, encoder_outputs)
 
-        return outputs, domain
+        # reconstruction decoder
+        _, reconstruction_outputs = self.reconstruction_decoder(encoded, encoder_outputs)
+
+        return reconstruction_outputs, segmentation_outputs, domain
+
+    # returns the basic segmentation network
+    def get_segmentation_net(self):
+
+        return unet_from_encoder_decoder(self.encoder, self.segmentation_decoder)
 
     # trains the network for one epoch
-    def train_epoch(self, src_loader, tar_loader, loss_fn, optimizer, epoch, print_stats=1, writer=None, write_images=False):
+    def train_epoch(self, src_loader, tar_loader, loss_seg_fn, loss_rec_fn, optimizer, epoch, print_stats=1, writer=None, write_images=False):
 
         # make sure network is on the gpu and in training mode
         self.cuda()
@@ -167,35 +181,37 @@ class UNetAE(nn.Module):
         loss_dom_fn = nn.CrossEntropyLoss()
 
         # keep track of the average loss during the epoch
+        loss_seg_cum = 0.0
         loss_rec_cum = 0.0
         loss_dom_cum = 0.0
         loss_cum = 0.0
         cnt = 0
 
         # start epoch
-        tar_data = list(enumerate(tar_loader))
+        list_tar = list(enumerate(tar_loader))
         for i, data in enumerate(src_loader):
 
             # get the inputs
-            x_src = data.cuda()
-            x_tar = tar_data[i][1].cuda()
-            x = torch.cat((x_src, x_tar), dim=0)
+            x_src, y_src = data[0].cuda(), data[1].cuda()
+            x_tar = list_tar[i][1].cuda()
 
             # prep domain labels
             dom_src = torch.zeros((x_src.size(0))).cuda().long()
             dom_tar = torch.ones((x_tar.size(0))).cuda().long()
-            dom = torch.cat((dom_src, dom_tar), dim=0)
 
             # zero the gradient buffers
             self.zero_grad()
 
             # forward prop
-            y_pred, dom_pred = self(x)
+            x_src_pred, y_src_pred, dom_src_pred = self(x_src)
+            x_tar_pred, y_tar_pred, dom_tar_pred = self(x_tar)
 
             # compute loss
-            loss_rec = loss_fn(y_pred, x)
-            loss_dom = loss_dom_fn(dom_pred, dom)
-            loss = loss_rec + self.lambda_rec*loss_dom
+            loss_seg = loss_seg_fn(y_src_pred, y_src)
+            loss_rec = 0.5 * (loss_rec_fn(x_src_pred, x_src) + loss_rec_fn(x_tar_pred, x_tar))
+            loss_dom = 0.5 * (loss_dom_fn(dom_src_pred, dom_src) + loss_dom_fn(dom_tar_pred, dom_tar))
+            loss = loss_seg + self.lambda_rec * loss_rec + self.lambda_dom * loss_dom
+            loss_seg_cum += loss_seg.data.cpu().numpy()
             loss_rec_cum += loss_rec.data.cpu().numpy()
             loss_dom_cum += loss_dom.data.cpu().numpy()
             loss_cum += loss.data.cpu().numpy()
@@ -213,6 +229,7 @@ class UNetAE(nn.Module):
                       % (datetime.datetime.now(), epoch, i, len(src_loader.dataset)/src_loader.batch_size, loss))
 
         # don't forget to compute the average and print it
+        loss_seg_avg = loss_seg_cum / cnt
         loss_rec_avg = loss_rec_cum / cnt
         loss_dom_avg = loss_dom_cum / cnt
         loss_avg = loss_cum / cnt
@@ -223,21 +240,30 @@ class UNetAE(nn.Module):
         if writer is not None:
 
             # always log scalars
+            writer.add_scalar('train/loss-seg', loss_seg_avg, epoch)
             writer.add_scalar('train/loss-rec', loss_rec_avg, epoch)
             writer.add_scalar('train/loss-dom', loss_dom_avg, epoch)
             writer.add_scalar('train/loss', loss_avg, epoch)
 
             if write_images:
                 # write images
+                x = torch.cat((x_src, x_tar), dim=0)
+                x_pred = torch.cat((x_src_pred, x_tar_pred), dim=0)
+                y_pred = torch.cat((y_src_pred, y_tar_pred), dim=0)
                 x = vutils.make_grid(x, normalize=True, scale_each=True)
-                x_rec = vutils.make_grid(torch.sigmoid(y_pred).data, normalize=True, scale_each=True)
-                writer.add_image('train/x-rec-input', x, epoch)
-                writer.add_image('train/x-rec-output', x_rec, epoch)
+                ys = vutils.make_grid(y_src, normalize=y_src.max() - y_src.min() > 0, scale_each=True)
+                x_pred = vutils.make_grid(x_pred.data, normalize=True, scale_each=True)
+                y_pred = vutils.make_grid(F.softmax(y_pred, dim=1)[:, 1:2, :, :].data,
+                                          normalize=y_pred.max() - y_pred.min() > 0, scale_each=True)
+                writer.add_image('train/x', x, epoch)
+                writer.add_image('train/y', ys, epoch)
+                writer.add_image('train/x-pred', x_pred, epoch)
+                writer.add_image('train/y-pred', y_pred, epoch)
 
         return loss_avg
 
     # tests the network over one epoch
-    def test_epoch(self, src_loader, tar_loader, loss_fn, epoch, writer=None, write_images=False):
+    def test_epoch(self, src_loader, tar_loader, loss_seg_fn, loss_rec_fn, epoch, writer=None, write_images=False):
 
         # make sure network is on the gpu and in training mode
         self.cuda()
@@ -247,38 +273,45 @@ class UNetAE(nn.Module):
         loss_dom_fn = nn.CrossEntropyLoss()
 
         # keep track of the average loss and metrics during the epoch
+        loss_seg_cum = 0.0
+        loss_seg_tar_cum = 0.0
         loss_rec_cum = 0.0
         loss_dom_cum = 0.0
         loss_cum = 0.0
         cnt = 0
 
         # test loss
-        tar_data = list(enumerate(tar_loader))
+        list_tar = list(enumerate(tar_loader))
         for i, data in enumerate(src_loader):
 
             # get the inputs
-            x_src = data.cuda()
-            x_tar = tar_data[i][1].cuda()
-            x = torch.cat((x_src, x_tar), dim=0)
+            x_src, y_src = data[0].cuda(), data[1].cuda()
+            x_tar, y_tar = list_tar[i][1][0].cuda(), list_tar[i][1][1].cuda()
 
             # prep domain labels
             dom_src = torch.zeros((x_src.size(0))).cuda().long()
             dom_tar = torch.ones((x_tar.size(0))).cuda().long()
-            dom = torch.cat((dom_src, dom_tar), dim=0)
 
             # forward prop
-            y_pred, dom_pred = self(x)
+            x_src_pred, y_src_pred, dom_src_pred = self(x_src)
+            x_tar_pred, y_tar_pred, dom_tar_pred = self(x_tar)
 
             # compute loss
-            loss_rec = loss_fn(y_pred, x)
-            loss_dom = loss_dom_fn(dom_pred, dom)
-            loss = loss_rec + self.lambda_rec*loss_dom
+            loss_seg = loss_seg_fn(y_src_pred, y_src)
+            loss_seg_tar = loss_seg_fn(y_tar_pred, y_tar)
+            loss_rec = 0.5 * (loss_rec_fn(x_src_pred, x_src) + loss_rec_fn(x_tar_pred, x_tar))
+            loss_dom = 0.5 * (loss_dom_fn(dom_src_pred, dom_src) + loss_dom_fn(dom_tar_pred, dom_tar))
+            loss = loss_seg + self.lambda_rec * loss_rec + self.lambda_dom * loss_dom
+            loss_seg_cum += loss_seg.data.cpu().numpy()
+            loss_seg_tar_cum += loss_seg_tar.data.cpu().numpy()
             loss_rec_cum += loss_rec.data.cpu().numpy()
             loss_dom_cum += loss_dom.data.cpu().numpy()
             loss_cum += loss.data.cpu().numpy()
             cnt += 1
 
         # don't forget to compute the average and print it
+        loss_seg_avg = loss_seg_cum / cnt
+        loss_seg_tar_avg = loss_seg_tar_cum / cnt
         loss_rec_avg = loss_rec_cum / cnt
         loss_dom_avg = loss_dom_cum / cnt
         loss_avg = loss_cum / cnt
@@ -289,20 +322,33 @@ class UNetAE(nn.Module):
         if writer is not None:
 
             # always log scalars
+            writer.add_scalar('test/loss-seg', loss_seg_avg, epoch)
+            writer.add_scalar('test/loss-seg-tar', loss_seg_tar_avg, epoch)
             writer.add_scalar('test/loss-rec', loss_rec_avg, epoch)
             writer.add_scalar('test/loss-dom', loss_dom_avg, epoch)
             writer.add_scalar('test/loss', loss_avg, epoch)
 
             if write_images:
+                # write images
+                x = torch.cat((x_src, x_tar), dim=0)
+                y = torch.cat((y_src, y_tar), dim=0)
+                x_pred = torch.cat((x_src_pred, x_tar_pred), dim=0)
+                y_pred = torch.cat((y_src_pred, y_tar_pred), dim=0)
                 x = vutils.make_grid(x, normalize=True, scale_each=True)
-                x_rec = vutils.make_grid(torch.sigmoid(y_pred).data, normalize=True, scale_each=True)
-                writer.add_image('test/x-rec-input', x, epoch)
-                writer.add_image('test/x-rec-output', x_rec, epoch)
+                y = vutils.make_grid(y, normalize=y.max() - y.min() > 0, scale_each=True)
+                x_pred = vutils.make_grid(x_pred.data, normalize=True, scale_each=True)
+                y_pred = vutils.make_grid(F.softmax(y_pred, dim=1)[:, 1:2, :, :].data,
+                                          normalize=y_pred.max() - y_pred.min() > 0, scale_each=True)
+                writer.add_image('test/x', x, epoch)
+                writer.add_image('test/y', y, epoch)
+                writer.add_image('test/x-pred', x_pred, epoch)
+                writer.add_image('test/y-pred', y_pred, epoch)
 
         return loss_avg
 
     # trains the network
-    def train_net(self, src_train_loader, src_test_loader, tar_train_loader, tar_test_loader, loss_fn, lr=1e-3, step_size=1, gamma=1, epochs=100, test_freq=1, print_stats=1, log_dir=None, write_images_freq=1):
+    def train_net(self, src_train_loader, src_test_loader, tar_train_loader, tar_test_loader, loss_seg_fn, loss_rec_fn,
+                  lr=1e-3, step_size=1, gamma=1, epochs=100, test_freq=1, print_stats=1, log_dir=None, write_images_freq=1):
 
         # log everything if necessary
         if log_dir is not None:
@@ -319,7 +365,8 @@ class UNetAE(nn.Module):
             print('[%s] Epoch %5d/%5d' % (datetime.datetime.now(), epoch, epochs))
 
             # train the model for one epoch
-            self.train_epoch(src_loader=src_train_loader, tar_loader=tar_train_loader, loss_fn=loss_fn, optimizer=optimizer, epoch=epoch,
+            self.train_epoch(src_loader=src_train_loader, tar_loader=tar_train_loader, loss_seg_fn=loss_seg_fn,
+                             loss_rec_fn=loss_rec_fn, optimizer=optimizer, epoch=epoch,
                              print_stats=print_stats, writer=writer, write_images=epoch % write_images_freq == 0)
 
             # adjust learning rate if necessary
@@ -331,8 +378,8 @@ class UNetAE(nn.Module):
 
             # test the model for one epoch is necessary
             if epoch % test_freq == 0:
-                test_loss = self.test_epoch(src_loader=src_test_loader, tar_loader=tar_test_loader, loss_fn=loss_fn,
-                                            epoch=epoch, writer=writer, write_images=True)
+                test_loss = self.test_epoch(src_loader=src_test_loader, tar_loader=tar_test_loader, loss_seg_fn=loss_seg_fn,
+                                            loss_rec_fn=loss_rec_fn, epoch=epoch, writer=writer, write_images=True)
 
                 # and save model if lower test loss is found
                 if test_loss < test_loss_min:

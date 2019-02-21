@@ -15,7 +15,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 
 from data.datasets import UnlabeledVolumeDataset, StronglyLabeledVolumeDataset
-from networks.ynet import YNet
+from networks.ynet_bvae import YNetBVAE
 from util.losses import CrossEntropyLoss, MSELoss
 from util.preprocessing import get_augmenters_2d
 from util.validation import segment
@@ -48,7 +48,8 @@ parser.add_argument("--group_norm", help="Use group normalization instead of bat
 parser.add_argument("--augment_noise", help="Use noise augmentation", type=int, default=0)
 
 # regularization parameters
-parser.add_argument('--lambda_rec', help='Regularization parameters for Y-Net reconstruction', type=float, default=0)
+parser.add_argument('--lambda_rec', help='Regularization parameters for Y-Net reconstruction', type=float, default=1e-3)
+parser.add_argument('--beta', help='Beta parameter', type=float, default=1e-3)
 
 # optimization parameters
 parser.add_argument("--lr", help="Learning rate of the optimization", type=float, default=1e-3)
@@ -99,7 +100,7 @@ tar_test_loader = DataLoader(tar_test, batch_size=args.test_batch_size//2)
     Build the network
 """
 print('[%s] Building the network' % (datetime.datetime.now()))
-net = YNet(feature_maps=args.fm, levels=args.levels, group_norm=(args.group_norm==1), lambda_rec=args.lambda_rec)
+net = YNetBVAE(feature_maps=args.fm, levels=args.levels, group_norm=(args.group_norm==1), lambda_rec=args.lambda_rec, beta=args.beta)
 
 """
     Setup optimization for training

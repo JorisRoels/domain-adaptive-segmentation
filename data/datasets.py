@@ -7,7 +7,11 @@ from util.tools import sample_unlabeled_input, sample_labeled_input
 
 class StronglyLabeledVolumeDataset(data.Dataset):
 
-    def __init__(self, data_path, label_path, input_shape, split=None, train=None, len_epoch=1000, preprocess='z', transform=None, target_transform=None, dtypes=('uint8','uint8')):
+    def __init__(self, data_path: object, label_path: object, input_shape: object, split: object = None, train: object = None, len_epoch: object = 1000,
+                 preprocess: object = 'z',
+                 transform: object = None,
+                 target_transform: object = None,
+                 dtypes: object = ('uint8', 'uint8')) -> object:
 
         self.data_path = data_path
         self.label_path = label_path

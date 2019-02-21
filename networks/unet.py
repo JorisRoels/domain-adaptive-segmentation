@@ -305,7 +305,12 @@ def unet_from_encoder_decoder(encoder, decoder):
 
     net = UNet2D(in_channels=encoder.in_channels, out_channels=decoder.out_channels, feature_maps=encoder.feature_maps, levels=encoder.levels)
 
-    net.encoder = encoder
-    net.decoder = decoder
+    params = list(net.encoder.parameters())
+    for i, param in enumerate(encoder.parameters()):
+        params[i] = param
+
+    params = list(net.decoder.parameters())
+    for i, param in enumerate(decoder.parameters()):
+        params[i] = param
 
     return net

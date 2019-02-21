@@ -1,26 +1,22 @@
 
 """
-    This is a script that pretrains U-Nets with the following approaches:
-        - Y-NET: proposed reconstruction-based domain adaptation
+    This is a script that trains a U-Net autoencoder in a domain adaptive way (i.e. both source and target are inferred)
 """
 
 """
     Necessary libraries
 """
+import os
 import argparse
 import datetime
-import os
-import torch
-import torch.optim as optim
 from torch.utils.data import DataLoader
 
-from data.datasets import UnlabeledVolumeDataset, StronglyLabeledVolumeDataset
-from networks.ynet import YNet
-from util.losses import CrossEntropyLoss, MSELoss
-from util.preprocessing import get_augmenters_2d
-from util.validation import segment
-from util.metrics import jaccard, dice
+from data.datasets import StronglyLabeledVolumeDataset, UnlabeledVolumeDataset
+from networks.ynet_ae import YNetAE
 from util.io import imwrite3D
+from util.losses import MSELoss, CrossEntropyLoss
+from util.preprocessing import get_augmenters_2d
+from util.validation import transform
 
 """
     Parse all the arguments
@@ -42,22 +38,21 @@ parser.add_argument("--print_stats", help="Number of iterations between each tim
 
 # network parameters
 parser.add_argument("--input_size", help="Size of the blocks that propagate through the network", type=str, default="128,128")
-parser.add_argument("--fm", help="Number of initial feature maps in the segmentation U-Net", type=int, default=16)
+parser.add_argument("--fm", help="Number of initial feature maps in the segmentation U-Net", type=int, default=8)
 parser.add_argument("--levels", help="Number of levels in the segmentation U-Net (i.e. number of pooling stages)", type=int, default=4)
 parser.add_argument("--group_norm", help="Use group normalization instead of batch normalization", type=int, default=0)
-parser.add_argument("--augment_noise", help="Use noise augmentation", type=int, default=0)
-
-# regularization parameters
-parser.add_argument('--lambda_rec', help='Regularization parameters for Y-Net reconstruction', type=float, default=0)
+parser.add_argument("--augment_noise", help="Use noise augmentation", type=int, default=1)
+parser.add_argument("--lambda_rec", help="Reconstruction loss regularization", type=float, default=1e-3)
+parser.add_argument("--lambda_dom", help="Domain loss regularization", type=float, default=1e-3)
 
 # optimization parameters
 parser.add_argument("--lr", help="Learning rate of the optimization", type=float, default=1e-3)
 parser.add_argument("--step_size", help="Number of epochs after which the learning rate should decay", type=int, default=10)
 parser.add_argument("--gamma", help="Learning rate decay factor", type=float, default=0.9)
-parser.add_argument("--epochs", help="Total number of epochs to train", type=int, default=10)
+parser.add_argument("--epochs", help="Total number of epochs to train", type=int, default=50)
 parser.add_argument("--test_freq", help="Number of epochs between each test stage", type=int, default=1)
-parser.add_argument("--train_batch_size", help="Batch size in the training stage", type=int, default=4)
-parser.add_argument("--test_batch_size", help="Batch size in the testing stage", type=int, default=4)
+parser.add_argument("--train_batch_size", help="Batch size in the training stage", type=int, default=2)
+parser.add_argument("--test_batch_size", help="Batch size in the testing stage", type=int, default=2)
 
 args = parser.parse_args()
 args.input_size = [int(item) for item in args.input_size.split(',')]
@@ -73,14 +68,13 @@ if not os.path.exists(args.log_dir):
 if args.write_dir is not None:
     if not os.path.exists(args.write_dir):
         os.mkdir(args.write_dir)
-    os.mkdir(os.path.join(args.write_dir, 'tar_segmentation_last'))
-    os.mkdir(os.path.join(args.write_dir, 'tar_segmentation_best'))
+    os.mkdir(os.path.join(args.write_dir, 'src_transform'))
+    os.mkdir(os.path.join(args.write_dir, 'tar_transform'))
 
 """
     Load the data
 """
 input_shape = (1, args.input_size[0], args.input_size[1])
-# load source
 print('[%s] Loading data' % (datetime.datetime.now()))
 # augmenters
 src_train_xtransform, src_train_ytransform, src_test_xtransform, src_test_ytransform = get_augmenters_2d(augment_noise=(args.augment_noise == 1))
@@ -90,57 +84,40 @@ src_train = StronglyLabeledVolumeDataset(args.src_data_train, args.src_labels_tr
 src_test = StronglyLabeledVolumeDataset(args.src_data_test, args.src_labels_test, input_shape, transform=src_test_xtransform, target_transform=src_test_ytransform, preprocess='unit')
 tar_train = UnlabeledVolumeDataset(args.tar_data_train, input_shape=input_shape, transform=tar_train_xtransform, preprocess='unit')
 tar_test = StronglyLabeledVolumeDataset(args.tar_data_test, args.tar_labels_test, input_shape=input_shape, transform=tar_test_xtransform, target_transform=tar_test_ytransform, preprocess='unit')
-src_train_loader = DataLoader(src_train, batch_size=args.train_batch_size//2)
-src_test_loader = DataLoader(src_test, batch_size=args.test_batch_size//2)
-tar_train_loader = DataLoader(tar_train, batch_size=args.train_batch_size//2)
-tar_test_loader = DataLoader(tar_test, batch_size=args.test_batch_size//2)
+src_train_loader = DataLoader(src_train, batch_size=args.train_batch_size)
+src_test_loader = DataLoader(src_test, batch_size=args.test_batch_size)
+tar_train_loader = DataLoader(tar_train, batch_size=args.train_batch_size)
+tar_test_loader = DataLoader(tar_test, batch_size=args.test_batch_size)
 
 """
-    Build the network
+    Setup optimization for unsupervised training
 """
-print('[%s] Building the network' % (datetime.datetime.now()))
-net = YNet(feature_maps=args.fm, levels=args.levels, group_norm=(args.group_norm==1), lambda_rec=args.lambda_rec)
+print('[%s] Setting up optimization for unsupervised training' % (datetime.datetime.now()))
+net = YNetAE(feature_maps=args.fm, levels=args.levels, group_norm=(args.group_norm == 1), lambda_rec=args.lambda_rec, lambda_dom=args.lambda_dom, s=args.input_size[0])
 
 """
-    Setup optimization for training
+    Train the network unsupervised
 """
-print('[%s] Setting up optimization for training' % (datetime.datetime.now()))
-optimizer = optim.Adam(net.parameters(), lr=args.lr)
-scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=args.step_size, gamma=args.gamma)
-
-"""
-    Train the network
-"""
-print('[%s] Starting training' % (datetime.datetime.now()))
-net.train_net(train_loader_source=src_train_loader, train_loader_target=tar_train_loader,
-              test_loader_source=src_test_loader, test_loader_target=tar_test_loader,
-              optimizer=optimizer, loss_seg_fn=loss_fn_seg, loss_rec_fn=loss_fn_rec,
-              scheduler=scheduler, epochs=args.epochs, test_freq=args.test_freq, print_stats=args.print_stats,
+print('[%s] Training network unsupervised' % (datetime.datetime.now()))
+net.train_net(src_train_loader=src_train_loader, src_test_loader=src_test_loader,
+              tar_train_loader=tar_train_loader, tar_test_loader=tar_test_loader,
+              loss_seg_fn=loss_fn_seg, loss_rec_fn=loss_fn_rec, lr=args.lr, step_size=args.step_size,
+              gamma=args.gamma, epochs=args.epochs, test_freq=args.test_freq, print_stats=args.print_stats,
               log_dir=args.log_dir)
 
-
 """
-    Validate the trained network
+    Write out the results
 """
-test_data = tar_test.data
-test_labels = tar_test.labels
-print('[%s] Validating the trained network' % (datetime.datetime.now()))
-seg_net = net.get_segmentation_net()
-segmentation_last_checkpoint = segment(test_data, seg_net, args.input_size, batch_size=args.test_batch_size)
-j = jaccard(segmentation_last_checkpoint, test_labels)
-d = dice(segmentation_last_checkpoint, test_labels)
-print('[%s] Network performance (last checkpoint): Jaccard=%f - Dice=%f' % (datetime.datetime.now(), j, d))
 if args.write_dir is not None:
+    print('[%s] Running the trained network on the source dataset' % (datetime.datetime.now()))
+    src_data = src_test.data
+    transform_last_checkpoint = transform(src_data, net, args.input_size, batch_size=args.test_batch_size)
     print('[%s] Writing the output' % (datetime.datetime.now()))
-    imwrite3D(segmentation_last_checkpoint, os.path.join(args.write_dir, 'tar_segmentation_last'), rescale=True)
-net = torch.load(os.path.join(args.log_dir, 'best_checkpoint.pytorch'))
-seg_net = net.get_segmentation_net()
-segmentation_best_checkpoint = segment(test_data, seg_net, args.input_size, batch_size=args.test_batch_size)
-j = jaccard(segmentation_best_checkpoint, test_labels)
-d = dice(segmentation_best_checkpoint, test_labels)
-print('[%s] Network performance (best checkpoint): Jaccard=%f - Dice=%f' % (datetime.datetime.now(), j, d))
-if args.write_dir is not None:
+    imwrite3D(transform_last_checkpoint, os.path.join(args.write_dir, 'src_transform'), rescale=True)
+    tar_data = tar_test.data
+    print('[%s] Running the trained network on the target dataset' % (datetime.datetime.now()))
+    transform_last_checkpoint = transform(tar_data, net, args.input_size, batch_size=args.test_batch_size)
     print('[%s] Writing the output' % (datetime.datetime.now()))
-    imwrite3D(segmentation_best_checkpoint, os.path.join(args.write_dir, 'tar_segmentation_best'), rescale=True)
+    imwrite3D(transform_last_checkpoint, os.path.join(args.write_dir, 'tar_transform'), rescale=True)
 
 print('[%s] Finished!' % (datetime.datetime.now()))
