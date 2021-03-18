@@ -1,11 +1,1 @@
-numpy
-tifffile
-scipy
-scikit-image
-imgaug
-torch
-torchvision
-jupyter
-progressbar2
-tensorboardX
-tensorflow
+neuralnets
