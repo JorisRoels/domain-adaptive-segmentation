@@ -18,7 +18,7 @@ def generate_model(name, params):
         return UNetDAT2D(in_channels=params['in_channels'], feature_maps=params['fm'], levels=params['levels'],
                          dropout_enc=params['dropout'], dropout_dec=params['dropout'], norm=params['norm'],
                          activation=params['activation'], coi=params['coi'], loss_fn=params['loss'],
-                         lambda_dat=params['lambda_dat'])
+                         lambda_dat=params['lambda_dat'], input_shape=params['input_size'])
     elif name == 'ynet':
         return YNet2D(in_channels=params['in_channels'], feature_maps=params['fm'], levels=params['levels'],
                       dropout_enc=params['dropout'], dropout_dec=params['dropout'], norm=params['norm'],
@@ -28,7 +28,8 @@ def generate_model(name, params):
         return WNet2D(in_channels=params['in_channels'], feature_maps=params['fm'], levels=params['levels'],
                       dropout_enc=params['dropout'], dropout_dec=params['dropout'], norm=params['norm'],
                       activation=params['activation'], coi=params['coi'], loss_fn=params['loss'],
-                      lambda_rec=params['lambda_rec'], lambda_dat=params['lambda_dat'])
+                      lambda_rec=params['lambda_rec'], lambda_dat=params['lambda_dat'],
+                      input_shape=params['input_size'])
     elif name == 'unet-ts':
         return UNetTS2D(in_channels=params['in_channels'], feature_maps=params['fm'], levels=params['levels'],
                         dropout_enc=params['dropout'], dropout_dec=params['dropout'], norm=params['norm'],
