@@ -286,7 +286,7 @@ class UNetDAT2DClassifier(UNetDA2DClassifier):
         self.model = UNetDAT2D(in_channels=self.in_channels, feature_maps=self.feature_maps, levels=self.levels,
                                dropout_enc=self.dropout, dropout_dec=self.dropout, norm=self.norm,
                                activation=self.activation, coi=self.coi, loss_fn=self.loss_fn,
-                               lambda_dat=self.lambda_dat)
+                               lambda_dat=self.lambda_dat, input_shape=self.input_shape)
         self.trainer = pl.Trainer(max_epochs=int(self.epochs), gpus=self.gpus, accelerator=self.accelerator,
                                   default_root_dir=self.log_dir, flush_logs_every_n_steps=self.log_freq,
                                   log_every_n_steps=self.log_freq, callbacks=self.callbacks,
@@ -612,7 +612,7 @@ class WNet2DClassifier(UNetDA2DClassifier):
         self.model = WNet2D(in_channels=self.in_channels, feature_maps=self.feature_maps, levels=self.levels,
                             dropout_enc=self.dropout, dropout_dec=self.dropout, norm=self.norm,
                             activation=self.activation, coi=self.coi, loss_fn=self.loss_fn, lambda_rec=self.lambda_rec,
-                            lambda_dat=self.lambda_dat)
+                            lambda_dat=self.lambda_dat, input_shape=self.input_shape)
         self.trainer = pl.Trainer(max_epochs=int(self.epochs), gpus=self.gpus, accelerator=self.accelerator,
                                   default_root_dir=self.log_dir, flush_logs_every_n_steps=self.log_freq,
                                   log_every_n_steps=self.log_freq, callbacks=self.callbacks,

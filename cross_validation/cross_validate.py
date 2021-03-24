@@ -78,7 +78,7 @@ if __name__ == '__main__':
     """
         Save and report results
     """
-    save(gs.cv_results_, params['results_file'])
+    save(gs, params['results_file'])
     hparams_dir = os.path.join(params['log_dir'], 'hparams')
     log_hparams(gs, log_dir=hparams_dir)
     print_frm(gs.best_params_)
