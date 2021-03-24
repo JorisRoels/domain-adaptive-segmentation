@@ -164,7 +164,7 @@ class UNetDAT2D(UNetDA2D):
         self.loss_ce = CrossEntropyLoss()
 
         # domain classifier
-        self.domain_classifier = CNN2D(conv_channels, fc_channels, (feature_maps, *self.input_shape), norm="batch")
+        self.domain_classifier = CNN2D(conv_channels, fc_channels, (feature_maps, *self.input_shape))
 
     def forward(self, x):
 
@@ -476,7 +476,7 @@ class WNet2D(UNetDA2D):
         self.loss_rec = L2Loss()
 
         # domain classifier
-        self.domain_classifier = CNN2D(conv_channels, fc_channels, (feature_maps, *self.input_shape), norm="batch")
+        self.domain_classifier = CNN2D(conv_channels, fc_channels, (feature_maps, *self.input_shape))
 
         # reconstruction network
         self.net_rec = UNet2D(input_shape=input_shape, in_channels=in_channels, coi=(1,), feature_maps=feature_maps,
