@@ -98,4 +98,4 @@ if __name__ == '__main__':
         Testing the network
     """
     print_frm('Testing network')
-    trainer.test(net, test_loader)
+    trainer.test(net.get_unet(), test_loader)
