@@ -4,12 +4,15 @@ import numpy as np
 import torch
 
 from torch.autograd import Function
+from torch.optim.lr_scheduler import StepLR
 
 from neuralnets.cross_validation.base import UNet2DClassifier
 from neuralnets.networks.unet import UNet2D
 from neuralnets.util.losses import CrossEntropyLoss
 
 LEN_EPOCH = 1000
+STEP_SIZE = 1
+GAMMA = 0.95
 
 
 def data_from_range(rng, dataset):
@@ -247,6 +250,11 @@ class UNetDA2D(UNet2D):
         net.decoder.load_state_dict(self.decoder.state_dict())
 
         return net
+
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
+        scheduler = StepLR(optimizer, step_size=STEP_SIZE, gamma=GAMMA)
+        return {"optimizer": optimizer, "lr_scheduler": scheduler, "monitor": 'val/mIoU'}
 
 
 class UNetDA2DClassifier(UNet2DClassifier):
