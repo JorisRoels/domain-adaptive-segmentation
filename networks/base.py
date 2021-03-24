@@ -9,6 +9,8 @@ from neuralnets.cross_validation.base import UNet2DClassifier
 from neuralnets.networks.unet import UNet2D
 from neuralnets.util.losses import CrossEntropyLoss
 
+LEN_EPOCH = 1000
+
 
 def data_from_range(rng, dataset):
 

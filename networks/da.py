@@ -10,7 +10,7 @@ from neuralnets.util.losses import CrossEntropyLoss, L2Loss
 from neuralnets.data.datasets import LabeledVolumeDataset
 
 from networks.base import UNetDA2D, UNetDA2DClassifier, data_from_range, param_regularization_loss, \
-    feature_regularization_loss, ReverseLayerF
+    feature_regularization_loss, ReverseLayerF, LEN_EPOCH
 
 
 class UNetMMD2D(UNetDA2D):
@@ -137,7 +137,7 @@ class UNetMMD2DClassifier(UNetDA2DClassifier):
         # construct dataloader
         train = LabeledVolumeDataset(X, y, input_shape=self.model.input_shape, in_channels=self.in_channels,
                                      batch_size=self.train_batch_size, transform=self.transform,
-                                     partial_labels=self.partial_labels)
+                                     partial_labels=self.partial_labels, len_epoch=LEN_EPOCH)
         loader = DataLoader(train, batch_size=self.train_batch_size, num_workers=self.num_workers, pin_memory=True)
 
         # train the network
@@ -295,7 +295,7 @@ class UNetDAT2DClassifier(UNetDA2DClassifier):
         # construct dataloader
         train = LabeledVolumeDataset(X, y, input_shape=self.model.input_shape, in_channels=self.in_channels,
                                      batch_size=self.train_batch_size, transform=self.transform,
-                                     partial_labels=self.partial_labels)
+                                     partial_labels=self.partial_labels, len_epoch=LEN_EPOCH)
         loader = DataLoader(train, batch_size=self.train_batch_size, num_workers=self.num_workers, pin_memory=True)
 
         # train the network
@@ -447,7 +447,7 @@ class YNet2DClassifier(UNetDA2DClassifier):
         # construct dataloader
         train = LabeledVolumeDataset(X, y, input_shape=self.model.input_shape, in_channels=self.in_channels,
                                      batch_size=self.train_batch_size, transform=self.transform,
-                                     partial_labels=self.partial_labels)
+                                     partial_labels=self.partial_labels, len_epoch=LEN_EPOCH)
         loader = DataLoader(train, batch_size=self.train_batch_size, num_workers=self.num_workers, pin_memory=True)
 
         # train the network
@@ -621,7 +621,7 @@ class WNet2DClassifier(UNetDA2DClassifier):
         # construct dataloader
         train = LabeledVolumeDataset(X, y, input_shape=self.model.input_shape, in_channels=self.in_channels,
                                      batch_size=self.train_batch_size, transform=self.transform,
-                                     partial_labels=self.partial_labels)
+                                     partial_labels=self.partial_labels, len_epoch=LEN_EPOCH)
         loader = DataLoader(train, batch_size=self.train_batch_size, num_workers=self.num_workers, pin_memory=True)
 
         # train the network
@@ -792,7 +792,7 @@ class UNetTS2DClassifier(UNetDA2DClassifier):
         # construct dataloader
         train = LabeledVolumeDataset(X, y, input_shape=self.model.input_shape, in_channels=self.in_channels,
                                      batch_size=self.train_batch_size, transform=self.transform,
-                                     partial_labels=self.partial_labels)
+                                     partial_labels=self.partial_labels, len_epoch=LEN_EPOCH)
         loader = DataLoader(train, batch_size=self.train_batch_size, num_workers=self.num_workers, pin_memory=True)
 
         # train the network
