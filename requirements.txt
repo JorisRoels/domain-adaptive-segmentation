@@ -1,1 +1,5 @@
+yaml
+torch
+torchvision
+pytorch-lightning
 neuralnets
