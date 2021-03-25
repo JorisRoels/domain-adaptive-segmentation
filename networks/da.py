@@ -764,7 +764,7 @@ class UNetTS2D(UNetDA2D):
             a = getattr(self, 'a' + str(i))
             b = getattr(self, 'b' + str(i))
             d = a.mul(src_weight) + b - tar_weight
-            w_loss = w_loss + torch.norm(d, 2)
+            w_loss = w_loss + torch.pow(d, 2).sum()
             cum_sum += np.prod(np.array(d.shape))
         w_loss = w_loss / cum_sum
 
