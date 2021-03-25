@@ -96,7 +96,7 @@ class UNetNoDA2DClassifier(UNetDA2DClassifier):
                                   progress_bar_refresh_rate=self.log_refresh_rate)
 
         # construct dataloader
-        train = LabeledVolumeDataset(X, y, input_shape=self.model.input_shape, in_channels=self.in_channels,
+        train = LabeledVolumeDataset(X, y, input_shape=(1, *self.input_shape), in_channels=self.in_channels,
                                      batch_size=self.train_batch_size, transform=self.transform,
                                      partial_labels=self.partial_labels, len_epoch=LEN_EPOCH)
         loader = DataLoader(train, batch_size=self.train_batch_size, num_workers=self.num_workers, pin_memory=True)

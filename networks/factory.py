@@ -52,7 +52,8 @@ def generate_classifier(name, params, dataset, transform):
                                     device=params['gpus'][0], transform=transform, feature_maps=params['fm'],
                                     levels=params['levels'], dropout=params['dropout'], norm=params['norm'],
                                     activation=params['activation'], coi=params['coi'], loss_fn=params['loss'],
-                                    partial_labels=(1, params['tar_labels_available']))
+                                    partial_labels=(1, params['tar_labels_available']),
+                                    input_shape=params['input_size'])
     elif name == 'mmd':
         return UNetMMD2DClassifier(dataset, epochs=params['epochs'], gpus=params['gpus'],
                                    accelerator=params['accelerator'], log_dir=params['log_dir'],
@@ -62,7 +63,8 @@ def generate_classifier(name, params, dataset, transform):
                                    device=params['gpus'][0], transform=transform, feature_maps=params['fm'],
                                    levels=params['levels'], dropout=params['dropout'], norm=params['norm'],
                                    activation=params['activation'], coi=params['coi'], loss_fn=params['loss'],
-                                   partial_labels=(1, params['tar_labels_available']), lambda_mmd=params['lambda_mmd'])
+                                   partial_labels=(1, params['tar_labels_available']), lambda_mmd=params['lambda_mmd'],
+                                   input_shape=params['input_size'])
     elif name == 'dat':
         return UNetDAT2DClassifier(dataset, epochs=params['epochs'], gpus=params['gpus'],
                                    accelerator=params['accelerator'], log_dir=params['log_dir'],
@@ -83,7 +85,7 @@ def generate_classifier(name, params, dataset, transform):
                                 feature_maps=params['fm'], levels=params['levels'], dropout=params['dropout'],
                                 norm=params['norm'], activation=params['activation'], coi=params['coi'],
                                 loss_fn=params['loss'], partial_labels=(1, params['tar_labels_available']),
-                                lambda_rec=params['lambda_rec'])
+                                lambda_rec=params['lambda_rec'], input_shape=params['input_size'])
     elif name == 'wnet':
         return WNet2DClassifier(dataset, epochs=params['epochs'], gpus=params['gpus'],
                                 accelerator=params['accelerator'], log_dir=params['log_dir'],
@@ -105,7 +107,7 @@ def generate_classifier(name, params, dataset, transform):
                                   levels=params['levels'], dropout=params['dropout'], norm=params['norm'],
                                   activation=params['activation'], coi=params['coi'], loss_fn=params['loss'],
                                   partial_labels=(1, params['tar_labels_available']), lambda_w=params['lambda_w'],
-                                  lambda_o=params['lambda_o'])
+                                  lambda_o=params['lambda_o'], input_shape=params['input_size'])
     else:
         return UNetNoDA2DClassifier(dataset, epochs=params['epochs'], gpus=params['gpus'],
                                     accelerator=params['accelerator'], log_dir=params['log_dir'],
@@ -115,4 +117,5 @@ def generate_classifier(name, params, dataset, transform):
                                     device=params['gpus'][0], transform=transform, feature_maps=params['fm'],
                                     levels=params['levels'], dropout=params['dropout'], norm=params['norm'],
                                     activation=params['activation'], coi=params['coi'], loss_fn=params['loss'],
-                                    partial_labels=(1, params['tar_labels_available']))
+                                    partial_labels=(1, params['tar_labels_available']),
+                                    input_shape=params['input_size'])
