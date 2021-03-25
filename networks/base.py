@@ -179,27 +179,6 @@ def mmd(source, target, gamma=10**3):
     return _mmd2(K_XX, K_XY, K_YY, const_diagonal=False, biased=True)
 
 
-def param_regularization_loss(src_params, tar_params, a, b):
-    """
-    Computes the regularization loss on the parameters of the two streams
-    :param src_params: parameters in the source encoder
-    :param tar_params: parameters in the target encoder
-    :param a: list of multiplication parameters a
-    :param b: list of bias parameters b
-    :return: parameter regularization loss
-    """
-
-    cum_sum = 0
-    w_loss = 0
-    for i, (src_weight, tar_weight) in enumerate(zip(src_params, tar_params)):
-        d = a[i].mul(src_weight) + b[i] - tar_weight
-        w_loss = w_loss + torch.norm(d, 2)
-        cum_sum += np.prod(np.array(d.shape))
-    w_loss = w_loss / cum_sum
-
-    return w_loss
-
-
 class ReverseLayerF(Function):
     """
     Gradient reversal layer (https://arxiv.org/abs/1505.07818)

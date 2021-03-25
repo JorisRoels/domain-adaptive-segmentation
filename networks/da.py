@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import torch.nn as nn
 import pytorch_lightning as pl
@@ -9,8 +10,8 @@ from neuralnets.networks.cnn import CNN2D
 from neuralnets.util.losses import CrossEntropyLoss, L2Loss
 from neuralnets.data.datasets import LabeledVolumeDataset
 
-from networks.base import UNetDA2D, UNetDA2DClassifier, data_from_range, param_regularization_loss, \
-    feature_regularization_loss, ReverseLayerF, LEN_EPOCH
+from networks.base import UNetDA2D, UNetDA2DClassifier, data_from_range, feature_regularization_loss, ReverseLayerF, \
+    LEN_EPOCH
 
 
 class UNetMMD2D(UNetDA2D):
@@ -650,15 +651,11 @@ class UNetTS2D(UNetDA2D):
                                          norm=self.norm, dropout=self.dropout_enc, activation=self.activation)
 
         # parameter transfer parameters
-        self.a = []
-        self.b = []
         for i, weight in enumerate(self.encoder_src.parameters()):
             a = nn.Parameter(torch.ones(weight.shape))
             b = nn.Parameter(torch.zeros(weight.shape))
             self.register_parameter('a' + str(i), a)
             self.register_parameter('b' + str(i), b)
-            self.a.append(a)
-            self.b.append(b)
 
     def forward(self, x, target=True):
 
@@ -689,7 +686,7 @@ class UNetTS2D(UNetDA2D):
         loss_src = self.loss_fn(y_src_pred, y_src[:, 0, ...])
         loss_tar = self.loss_fn(y_tar_pred, y_tar[:, 0, ...])
         loss_o = feature_regularization_loss(f_src, f_tar, method='coral', n_samples=self.n_samples_coral)
-        loss_w = param_regularization_loss(self.encoder_src.parameters(), self.encoder.parameters(), self.a, self.b)
+        loss_w = self._param_regularization_loss()
         loss = loss_src + loss_tar + self.lambda_o * loss_o + self.lambda_w * loss_w
 
         # compute iou
@@ -729,7 +726,7 @@ class UNetTS2D(UNetDA2D):
         loss_src = self.loss_fn(y_src_pred, y_src[:, 0, ...])
         loss_tar = self.loss_fn(y_tar_pred, y_tar[:, 0, ...])
         loss_o = feature_regularization_loss(f_src, f_tar, method='coral', n_samples=self.n_samples_coral)
-        loss_w = param_regularization_loss(self.encoder_src.parameters(), self.encoder.parameters(), self.a, self.b)
+        loss_w = self._param_regularization_loss()
         loss = loss_src + loss_tar + self.lambda_o * loss_o + self.lambda_w * loss_w
 
         # compute iou
@@ -751,6 +748,27 @@ class UNetTS2D(UNetDA2D):
             self._log_predictions(x_tar, y_tar, y_tar_pred, prefix='val_tar')
 
         return loss
+
+    def _param_regularization_loss(self):
+        """
+        Computes the regularization loss on the parameters of the two streams
+        :return: parameter regularization loss
+        """
+
+        src_params = self.encoder_src.parameters()
+        tar_params = self.encoder.parameters()
+
+        cum_sum = 0
+        w_loss = 0
+        for i, (src_weight, tar_weight) in enumerate(zip(src_params, tar_params)):
+            a = getattr(self, 'a' + str(i))
+            b = getattr(self, 'b' + str(i))
+            d = a.mul(src_weight) + b - tar_weight
+            w_loss = w_loss + torch.norm(d, 2)
+            cum_sum += np.prod(np.array(d.shape))
+        w_loss = w_loss / cum_sum
+
+        return w_loss
 
 
 class UNetTS2DClassifier(UNetDA2DClassifier):
