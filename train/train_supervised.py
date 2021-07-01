@@ -48,7 +48,7 @@ if __name__ == '__main__':
     input_shape = (1, *(params['input_size']))
     split = params['train_val_test_split']
     transform = Compose([Rotate90(), Flip(prob=0.5, dim=0), Flip(prob=0.5, dim=1), ContrastAdjust(adj=0.1),
-                         AddNoise(sigma_max=0.05)])
+                         RandomDeformation(), AddNoise(sigma_max=0.05), CleanDeformedLabels(params['coi'])])
     print_frm('Training data...')
     train = LabeledVolumeDataset(params['data'], params['labels'], input_shape=input_shape,
                                  in_channels=params['in_channels'], type=params['type'],
