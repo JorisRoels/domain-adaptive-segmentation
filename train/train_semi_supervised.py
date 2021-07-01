@@ -49,7 +49,7 @@ if __name__ == '__main__':
     split_src = params['src']['train_val_test_split']
     split_tar = params['tar']['train_val_test_split']
     transform = Compose([Rotate90(), Flip(prob=0.5, dim=0), Flip(prob=0.5, dim=1), ContrastAdjust(adj=0.1),
-                         RandomDeformation(), AddNoise(sigma_max=0.05), CleanDeformedLabels(params['coi'])])
+                         AddNoise(sigma_max=0.05)])
     print_frm('Training data...')
     train = LabeledVolumeDataset((params['src']['data'], params['tar']['data']),
                                  (params['src']['labels'], params['tar']['labels']),
