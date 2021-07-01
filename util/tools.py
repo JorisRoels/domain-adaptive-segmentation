@@ -18,10 +18,11 @@ def parse_params(params):
         params['tar_labels_available'] = float(params['tar_labels_available'])
 
     for dom in ['src', 'tar']:
-        keys = params[dom].keys()
-        if 'train_val_test_split' in keys:
-            params[dom]['train_val_test_split'] = [float(item) for item in
-                                                   params[dom]['train_val_test_split'].split(',')]
+        if dom in keys:
+            ks = params[dom].keys()
+            if 'train_val_test_split' in ks:
+                params[dom]['train_val_test_split'] = [float(item) for item in
+                                                       params[dom]['train_val_test_split'].split(',')]
 
     return params
 

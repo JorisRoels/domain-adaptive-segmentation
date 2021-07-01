@@ -3,25 +3,13 @@
 # ===========
 #
 # method
-method: no-da  # no-da, mmd, dat, ynet, wnet or unet-ts
-lambda_mmd: 1
-lambda_dat: 1
-lambda_rec: 1
-lambda_o: 1
-lambda_w: 1
+method: u-net  # u-net
 # data
-src:
-  data: /home/jorisro/research/data/EM/EPFL/raw
-  labels: /home/jorisro/research/data/EM/EPFL/labels
-  train_val_test_split: 0.50,0.75
-  split_orientation: z
-tar:
-  data: /home/jorisro/research/data/EM/VNC/raw
-  labels: /home/jorisro/research/data/EM/VNC/labels
-  train_val_test_split: 0.50,0.75
-  split_orientation: z
+data: /home/jorisro/research/data/EM/VNC/raw
+labels: /home/jorisro/research/data/EM/VNC/labels
+train_val_test_split: 0.50,0.75
+split_orientation: z
 type: pngseq
-tar_labels_available: 0.00
 # network
 input_size: 256,256
 in_channels: 1
@@ -34,7 +22,7 @@ coi: 0,1
 # optimization
 loss: ce
 lr: 0.001
-epochs: 5
+epochs: 1
 train_batch_size: 4
 test_batch_size: 4
 # compute
@@ -42,7 +30,7 @@ gpus: 0
 num_workers: 12
 accelerator: dp
 # logging
-log_dir: semi_supervised
+log_dir: supervised
 log_freq: 50
 log_refresh_rate: -1
 # reproducibility

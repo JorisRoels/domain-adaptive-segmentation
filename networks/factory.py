@@ -5,7 +5,11 @@ from networks.da import *
 
 def generate_model(name, params):
 
-    if name == 'no-da':
+    if name == 'u-net':
+        return UNetDA2D(in_channels=params['in_channels'], feature_maps=params['fm'], levels=params['levels'],
+                        dropout_enc=params['dropout'], dropout_dec=params['dropout'], norm=params['norm'],
+                        activation=params['activation'], coi=params['coi'], loss_fn=params['loss'])
+    elif name == 'no-da':
         return UNetNoDA2D(in_channels=params['in_channels'], feature_maps=params['fm'], levels=params['levels'],
                           dropout_enc=params['dropout'], dropout_dec=params['dropout'], norm=params['norm'],
                           activation=params['activation'], coi=params['coi'], loss_fn=params['loss'])

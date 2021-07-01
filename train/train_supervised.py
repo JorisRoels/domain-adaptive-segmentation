@@ -1,5 +1,5 @@
 """
-    This is a script that illustrates semi-supervised domain adaptive training
+    This is a script that illustrates supervised training
 """
 
 """
@@ -30,7 +30,7 @@ if __name__ == '__main__':
     print_frm('Parsing arguments')
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", "-c", help="Path to the configuration file", type=str,
-                        default='train_semi_supervised.yaml')
+                        default='train_supervised.yaml')
     args = parser.parse_args()
     with open(args.config) as file:
         params = parse_params(yaml.load(file, Loader=yaml.FullLoader))
@@ -45,30 +45,24 @@ if __name__ == '__main__':
     """
     print_frm('Loading data')
     input_shape = (1, *(params['input_size']))
-    split_src = params['src']['train_val_test_split']
-    split_tar = params['tar']['train_val_test_split']
+    split = params['train_val_test_split']
     transform = Compose([Rotate90(), Flip(prob=0.5, dim=0), Flip(prob=0.5, dim=1), ContrastAdjust(adj=0.1),
                          RandomDeformation(), AddNoise(sigma_max=0.05), CleanDeformedLabels(params['coi'])])
     print_frm('Training data...')
-    train = LabeledVolumeDataset((params['src']['data'], params['tar']['data']),
-                                 (params['src']['labels'], params['tar']['labels']),
-                                 input_shape=input_shape, in_channels=params['in_channels'],
-                                 type=params['type'], batch_size=params['train_batch_size'], transform=transform,
-                                 range_split=((0, split_src[0]), (0, split_tar[0])),
-                                 range_dir=(params['src']['split_orientation'], params['tar']['split_orientation']),
-                                 partial_labels=(1, params['tar_labels_available']))
+    train = LabeledVolumeDataset(params['data'], params['labels'], input_shape=input_shape,
+                                 in_channels=params['in_channels'], type=params['type'],
+                                 batch_size=params['train_batch_size'], transform=transform,
+                                 range_split=(0, split[0]), range_dir=params['split_orientation'])
     print_frm('Validation data...')
-    val = LabeledVolumeDataset((params['src']['data'], params['tar']['data']),
-                               (params['src']['labels'], params['tar']['labels']),
-                               input_shape=input_shape, in_channels=params['in_channels'], type=params['type'],
+    val = LabeledVolumeDataset(params['data'], params['labels'], input_shape=input_shape,
+                               in_channels=params['in_channels'], type=params['type'],
                                batch_size=params['train_batch_size'], transform=transform,
-                               range_split=((split_src[0], split_src[1]), (split_tar[0], split_tar[1])),
-                               range_dir=(params['src']['split_orientation'], params['tar']['split_orientation']))
+                               range_split=(split[0], split[1]), range_dir=params['split_orientation'])
     print_frm('Testing data...')
-    test = LabeledSlidingWindowDataset(params['tar']['data'], params['tar']['labels'], input_shape=input_shape,
+    test = LabeledSlidingWindowDataset(params['data'], params['labels'], input_shape=input_shape,
                                        in_channels=params['in_channels'], type=params['type'],
                                        batch_size=params['train_batch_size'], transform=transform,
-                                       range_split=(split_tar[1], 1), range_dir=params['tar']['split_orientation'])
+                                       range_split=(split[1], 1), range_dir=params['split_orientation'])
     train_loader = DataLoader(train, batch_size=params['train_batch_size'], num_workers=params['num_workers'],
                               pin_memory=True)
     val_loader = DataLoader(val, batch_size=params['test_batch_size'], num_workers=params['num_workers'],
