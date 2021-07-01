@@ -42,6 +42,7 @@ params['coi'][VIB_EVHELA] = '0,1,2,3'
 parser = argparse.ArgumentParser()
 parser.add_argument("--base_file", "-b", help="Path to the base configuration file", type=str, default='base.yaml')
 parser.add_argument("--domain", "-d", help="Target domain", type=str, default='epfl')
+parser.add_argument("--gpu", "-g", help="Index of the GPU computing device", type=int, default=0)
 args = parser.parse_args()
 
 # read and adjust template
@@ -54,6 +55,8 @@ with open(args.base_file, 'r') as f:
             data[k] = data[k].replace('<SPLIT_ORIENTATION>', params['split_orientation'][args.domain])
             data[k] = data[k].replace('<INPUT_SIZE>', params['input_size'][args.domain])
             data[k] = data[k].replace('<COI>', params['coi'][args.domain])
+            if data[k] == '<GPU>':
+                data[k] = args.gpu
 
 # write config file
 with open(os.path.join(os.path.dirname(args.base_file), args.domain + '.yaml'), 'w') as f:
