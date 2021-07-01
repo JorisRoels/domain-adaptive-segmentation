@@ -7,6 +7,8 @@
 """
 import argparse
 import yaml
+import os
+import shutil
 
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
@@ -32,6 +34,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", "-c", help="Path to the configuration file", type=str,
                         default='train_semi_supervised.yaml')
+    parser.add_argument("--clean-up", help="Boolean flag that specifies cleaning of the checkpoints",
+                        action='store_true', default=False)
     args = parser.parse_args()
     with open(args.config) as file:
         params = parse_params(yaml.load(file, Loader=yaml.FullLoader))
@@ -101,3 +105,16 @@ if __name__ == '__main__':
     """
     print_frm('Testing network')
     trainer.test(net.get_unet(), test_loader)
+
+    """
+        Save the final model
+    """
+    print_frm('Saving final model')
+    shutil.copyfile(trainer.checkpoint_callback.best_model_path, os.path.join(trainer.log_dir, 'best_model.ckpt'))
+
+    """
+        Clean up
+    """
+    print_frm('Cleaning up')
+    if args.clean_up:
+        os.system('rm -r ' + os.path.join(trainer.log_dir, 'checkpoints'))
