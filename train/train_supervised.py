@@ -9,6 +9,7 @@ import argparse
 import yaml
 
 import pytorch_lightning as pl
+from pytorch_lightning.callbacks import ModelCheckpoint
 from torch.utils.data import DataLoader
 
 from neuralnets.data.datasets import LabeledVolumeDataset, LabeledSlidingWindowDataset
@@ -82,9 +83,10 @@ if __name__ == '__main__':
     print_frm('Starting training')
     print_frm('Training with loss: %s' % params['loss'])
     lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval='step')
+    checkpoint_callback = ModelCheckpoint(save_top_k=5, verbose=True, monitor='val/mIoU', mode='max')
     trainer = pl.Trainer(max_epochs=params['epochs'], gpus=params['gpus'], accelerator=params['accelerator'],
                          default_root_dir=params['log_dir'], flush_logs_every_n_steps=params['log_freq'],
-                         log_every_n_steps=params['log_freq'], callbacks=[lr_monitor],
+                         log_every_n_steps=params['log_freq'], callbacks=[lr_monitor, checkpoint_callback],
                          progress_bar_refresh_rate=params['log_refresh_rate'])
     trainer.fit(net, train_loader, val_loader)
 

@@ -221,10 +221,16 @@ class UNetDA2D(UNet2D):
         Get the segmentation network branch
         :return: a U-Net module
         """
+
+        # load parameters of best model
+        self.load_state_dict(torch.load(self.trainer.checkpoint_callback.best_model_path)['state_dict'])
+
+        # initialize new UNet2D model
         net = UNet2D(in_channels=self.encoder.in_channels, coi=self.coi, feature_maps=self.encoder.feature_maps,
                      levels=self.encoder.levels, skip_connections=self.decoder.skip_connections,
                      norm=self.encoder.norm, activation=self.encoder.activation, dropout_enc=self.encoder.dropout)
 
+        # load optimal parameters in the model
         net.encoder.load_state_dict(self.encoder.state_dict())
         net.decoder.load_state_dict(self.decoder.state_dict())
 
