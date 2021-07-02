@@ -54,9 +54,9 @@ if __name__ == '__main__':
     split_tar = params['tar']['train_val_test_split']
     transform = Compose([Rotate90(), Flip(prob=0.5, dim=0), Flip(prob=0.5, dim=1), ContrastAdjust(adj=0.1),
                          AddNoise(sigma_max=0.05)])
-    print_frm('Training data...')
+    print_frm('Train data...')
     train = LabeledVolumeDataset((params['src']['data'], params['tar']['data']),
-                                 (params['src']['labels'], params['tar']['labels']),
+                                 (params['src']['labels'], params['tar']['labels']), len_epoch=2000,
                                  input_shape=input_shape, in_channels=params['in_channels'],
                                  type=params['type'], batch_size=params['train_batch_size'], transform=transform,
                                  range_split=((0, split_src[0]), (0, split_tar[0])),
@@ -64,12 +64,12 @@ if __name__ == '__main__':
                                  partial_labels=(1, params['tar_labels_available']))
     print_frm('Validation data...')
     val = LabeledVolumeDataset((params['src']['data'], params['tar']['data']),
-                               (params['src']['labels'], params['tar']['labels']),
+                               (params['src']['labels'], params['tar']['labels']), len_epoch=2000,
                                input_shape=input_shape, in_channels=params['in_channels'], type=params['type'],
                                batch_size=params['train_batch_size'], transform=transform,
                                range_split=((split_src[0], split_src[1]), (split_tar[0], split_tar[1])),
                                range_dir=(params['src']['split_orientation'], params['tar']['split_orientation']))
-    print_frm('Testing data...')
+    print_frm('Test data...')
     test = LabeledSlidingWindowDataset(params['tar']['data'], params['tar']['labels'], input_shape=input_shape,
                                        in_channels=params['in_channels'], type=params['type'],
                                        batch_size=params['train_batch_size'], transform=transform,

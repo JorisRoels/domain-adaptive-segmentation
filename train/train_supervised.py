@@ -53,17 +53,17 @@ if __name__ == '__main__':
     split = params['train_val_test_split']
     transform = Compose([Rotate90(), Flip(prob=0.5, dim=0), Flip(prob=0.5, dim=1), ContrastAdjust(adj=0.1),
                          AddNoise(sigma_max=0.05)])
-    print_frm('Training data...')
-    train = LabeledVolumeDataset(params['data'], params['labels'], input_shape=input_shape,
+    print_frm('Train data...')
+    train = LabeledVolumeDataset(params['data'], params['labels'], input_shape=input_shape, len_epoch=2000,
                                  in_channels=params['in_channels'], type=params['type'],
                                  batch_size=params['train_batch_size'], transform=transform,
                                  range_split=(0, split[0]), range_dir=params['split_orientation'])
     print_frm('Validation data...')
-    val = LabeledVolumeDataset(params['data'], params['labels'], input_shape=input_shape,
+    val = LabeledVolumeDataset(params['data'], params['labels'], input_shape=input_shape, len_epoch=2000,
                                in_channels=params['in_channels'], type=params['type'],
                                batch_size=params['train_batch_size'], transform=transform,
                                range_split=(split[0], split[1]), range_dir=params['split_orientation'])
-    print_frm('Testing data...')
+    print_frm('Test data...')
     test = LabeledSlidingWindowDataset(params['data'], params['labels'], input_shape=input_shape,
                                        in_channels=params['in_channels'], type=params['type'],
                                        batch_size=params['train_batch_size'], transform=transform,
