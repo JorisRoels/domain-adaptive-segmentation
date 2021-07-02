@@ -34,11 +34,10 @@ for DOM in [PO936Q, VIB_EVHELA]:
 for DOM in [VNC, UROCELL]:
     params['input_size'][DOM] = '256,256'
 params['input_size'][EMBL_HELA] = '128,128'
-for DOM in [EPFL, UROCELL, MITOEM_H, MITOEM_R, MIRA, KASTHURI, VNC]:
+for DOM in [EPFL, UROCELL, MITOEM_H, MITOEM_R, MIRA, KASTHURI, VNC, PO936Q]:
     params['coi'][DOM] = '0,1'
 params['coi'][EMBL_HELA] = '0,2'
-params['coi'][PO936Q] = '0,1,3'
-params['coi'][VIB_EVHELA] = '0,1,2,3'
+params['coi'][VIB_EVHELA] = '0,1,2'
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--base_file", "-b", help="Path to the base configuration file", type=str, default='base.yaml')
