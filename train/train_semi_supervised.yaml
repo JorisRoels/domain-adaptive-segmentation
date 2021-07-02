@@ -32,7 +32,7 @@ norm: batch
 activation: relu
 coi: 0,1
 # optimization
-loss: ce
+loss: dice
 lr: 0.001
 epochs: 5
 train_batch_size: 4

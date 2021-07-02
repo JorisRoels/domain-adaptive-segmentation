@@ -26,13 +26,14 @@ for DOM in [EPFL, UROCELL, PO936Q, MITOEM_H, MITOEM_R, KASTHURI, VIB_EVHELA]:
     params['split_orientation'][DOM] = 'z'
 for DOM in [MIRA, VNC, EMBL_HELA]:
     params['split_orientation'][DOM] = 'y'
-for DOM in [EPFL, MITOEM_H, MITOEM_R, MIRA, KASTHURI]:
-    params['input_size'][DOM] = '512,512'
+for DOM in [MITOEM_H, MITOEM_R, MIRA, KASTHURI]:
+    params['input_size'][DOM] = '768,768'
+params['input_size'][EPFL] = '512,512'
 for DOM in [PO936Q, VIB_EVHELA]:
     params['input_size'][DOM] = '448,448'
-params['input_size'][UROCELL] = '256,256'
-for DOM in [VNC, EMBL_HELA]:
-    params['input_size'][DOM] = '128,128'
+for DOM in [VNC, UROCELL]:
+    params['input_size'][DOM] = '256,256'
+params['input_size'][EMBL_HELA] = '128,128'
 for DOM in [EPFL, UROCELL, MITOEM_H, MITOEM_R, MIRA, KASTHURI, VNC]:
     params['coi'][DOM] = '0,1'
 params['coi'][EMBL_HELA] = '0,2'
