@@ -17,12 +17,12 @@ VIB_EVHELA = 'evhela'
 
 # fill in parameters
 params = {'train_val_test_split': {}, 'split_orientation': {}, 'input_size': {}, 'coi': {}}
-for DOM in [EPFL, EMBL_HELA]:
-    params['train_val_test_split'][DOM] = '0.40,0.50'
+params['train_val_test_split'][EPFL] = '0.40,0.50'
 for DOM in [UROCELL, PO936Q, MITOEM_H, MITOEM_R, MIRA, VIB_EVHELA]:
     params['train_val_test_split'][DOM] = '0.48,0.60'
 params['train_val_test_split'][VNC] = '0.30,0.50'
 params['train_val_test_split'][KASTHURI] = '0.426,0.532'
+params['train_val_test_split'][EMBL_HELA] = '0.40,0.65'
 for DOM in [EPFL, UROCELL, PO936Q, MITOEM_H, MITOEM_R, KASTHURI, VIB_EVHELA]:
     params['split_orientation'][DOM] = 'z'
 for DOM in [MIRA, VNC, EMBL_HELA]:
