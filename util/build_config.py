@@ -17,10 +17,11 @@ VIB_EVHELA = 'evhela'
 
 # fill in parameters
 params = {'train_val_test_split': {}, 'split_orientation': {}, 'input_size': {}, 'coi': {}}
-for DOM in [EPFL, EMBL_HELA, VNC]:
+for DOM in [EPFL, EMBL_HELA]:
     params['train_val_test_split'][DOM] = '0.40,0.50'
 for DOM in [UROCELL, PO936Q, MITOEM_H, MITOEM_R, MIRA, VIB_EVHELA]:
     params['train_val_test_split'][DOM] = '0.48,0.60'
+params['train_val_test_split'][VNC] = '0.30,0.50'
 params['train_val_test_split'][KASTHURI] = '0.426,0.532'
 for DOM in [EPFL, UROCELL, PO936Q, MITOEM_H, MITOEM_R, KASTHURI, VIB_EVHELA]:
     params['split_orientation'][DOM] = 'z'
@@ -31,9 +32,9 @@ for DOM in [MITOEM_H, MITOEM_R, MIRA, KASTHURI]:
 params['input_size'][EPFL] = '512,512'
 for DOM in [PO936Q, VIB_EVHELA]:
     params['input_size'][DOM] = '448,448'
-params['input_size'][VNC] = '384,384'
 params['input_size'][UROCELL] = '256,256'
-params['input_size'][EMBL_HELA] = '192,192'
+for DOM in [VNC, EMBL_HELA]:
+    params['input_size'][DOM] = '192,192'
 for DOM in [EPFL, UROCELL, MITOEM_H, MITOEM_R, MIRA, KASTHURI, VNC, PO936Q]:
     params['coi'][DOM] = '0,1'
 params['coi'][EMBL_HELA] = '0,2'
