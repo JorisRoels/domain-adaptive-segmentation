@@ -33,8 +33,8 @@ params['input_size'][EPFL] = '512,512'
 for DOM in [PO936Q, VIB_EVHELA]:
     params['input_size'][DOM] = '448,448'
 params['input_size'][UROCELL] = '256,256'
-for DOM in [VNC, EMBL_HELA]:
-    params['input_size'][DOM] = '192,192'
+params['input_size'][VNC] = '192,192'
+params['input_size'][EMBL_HELA] = '128,128'
 for DOM in [EPFL, UROCELL, MITOEM_H, MITOEM_R, MIRA, KASTHURI, VNC, PO936Q]:
     params['coi'][DOM] = '0,1'
 params['coi'][EMBL_HELA] = '0,2'
