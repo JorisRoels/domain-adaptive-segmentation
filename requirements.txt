@@ -56,7 +56,7 @@ imagesize==1.2.0
 imgaug==0.4.0
 itsdangerous==1.1.0
 jdcal==1.4.1
-Jinja2==2.11.2
+Jinja2==2.11.3
 json5==0.9.5
 jupyter==1.0.0
 jupyterlab==2.2.6
