@@ -1,4 +1,4 @@
-yaml
+pyyaml
 torch
 torchvision
 pytorch-lightning
