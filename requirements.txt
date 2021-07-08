@@ -5,3 +5,4 @@ torchaudio==0.8.1
 torchmetrics==0.2.0
 torchvision==0.9.1
 opencv-python==4.4.0.42
+elasticdeform==0.4.9
