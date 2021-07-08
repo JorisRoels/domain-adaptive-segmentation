@@ -58,3 +58,19 @@ def parse_search_grid(sg_str):
         search_grid[param] = values
 
     return search_grid
+
+
+def process_seconds(s):
+    """
+    Processes an amount of seconds to (hours, minutes, seconds)
+
+    :param s: an amount of seconds
+    :return: a tuple (h, m, s) that corresponds with the amount of hours, minutes and seconds, respectively
+    """
+
+    h = s // 3600
+    s -= h*3600
+    m = s // 60
+    s -= m*60
+
+    return h, m, s

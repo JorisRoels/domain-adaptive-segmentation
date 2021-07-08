@@ -9,6 +9,7 @@ import argparse
 import yaml
 import os
 import shutil
+import time
 
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
@@ -19,7 +20,7 @@ from neuralnets.util.augmentation import *
 from neuralnets.util.io import print_frm
 from neuralnets.util.tools import set_seed
 
-from util.tools import parse_params
+from util.tools import parse_params, process_seconds
 from networks.factory import generate_model
 
 from multiprocessing import freeze_support
@@ -54,9 +55,10 @@ if __name__ == '__main__':
     split_tar = params['tar']['train_val_test_split']
     transform = Compose([Rotate90(), Flip(prob=0.5, dim=0), Flip(prob=0.5, dim=1), ContrastAdjust(adj=0.1),
                          AddNoise(sigma_max=0.05)])
+    len_epoch = 2000
     print_frm('Train data...')
     train = LabeledVolumeDataset((params['src']['data'], params['tar']['data']),
-                                 (params['src']['labels'], params['tar']['labels']), len_epoch=2000,
+                                 (params['src']['labels'], params['tar']['labels']), len_epoch=len_epoch,
                                  input_shape=input_shape, in_channels=params['in_channels'],
                                  type=params['type'], batch_size=params['train_batch_size'], transform=transform,
                                  range_split=((0, split_src[0]), (0, split_tar[0])),
@@ -64,7 +66,7 @@ if __name__ == '__main__':
                                  partial_labels=(1, params['tar_labels_available']))
     print_frm('Validation data...')
     val = LabeledVolumeDataset((params['src']['data'], params['tar']['data']),
-                               (params['src']['labels'], params['tar']['labels']), len_epoch=2000,
+                               (params['src']['labels'], params['tar']['labels']), len_epoch=len_epoch,
                                input_shape=input_shape, in_channels=params['in_channels'], type=params['type'],
                                batch_size=params['train_batch_size'], transform=transform,
                                range_split=((split_src[0], split_src[1]), (split_tar[0], split_tar[1])),
@@ -98,13 +100,21 @@ if __name__ == '__main__':
                          default_root_dir=params['log_dir'], flush_logs_every_n_steps=params['log_freq'],
                          log_every_n_steps=params['log_freq'], callbacks=[lr_monitor, checkpoint_callback],
                          progress_bar_refresh_rate=params['log_refresh_rate'])
+    t_start = time.perf_counter()
     trainer.fit(net, train_loader, val_loader)
+    t_stop = time.perf_counter()
+    print_frm('Elapsed training time: %d hours, %d minutes, %.2f seconds' % process_seconds(t_stop - t_start))
+    print_frm('Average time / epoch: %.2f hours, %d minutes, %.2f seconds' %
+              process_seconds((t_stop - t_start) / params['epochs']))
 
     """
         Testing the network
     """
     print_frm('Testing network')
+    t_start = time.perf_counter()
     trainer.test(net.get_unet(), test_loader)
+    t_stop = time.perf_counter()
+    print_frm('Elapsed testing time: %d hours, %d minutes, %.2f seconds' % process_seconds(t_stop - t_start))
 
     """
         Save the final model
