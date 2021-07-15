@@ -81,6 +81,7 @@ parser.add_argument("--tar-domain", "-dt", help="Target domain", type=str, defau
 parser.add_argument("--method", "-m", help="Method to use", type=str, default='unet-ts')
 parser.add_argument("--available_labels", "-al", help="Fraction of available target labels", type=float, default=0.0)
 parser.add_argument("--gpu", "-g", help="Index of the GPU computing device", type=int, default=0)
+parser.add_argument("--coi", "-c", help="Class of interest (1: mito, 2: er, 3: nm)", type=int, default=1)
 args = parser.parse_args()
 
 # get default parameters
@@ -98,10 +99,11 @@ with open(args.base_file, 'r') as f:
                 data[k] = data[k].replace(m_param[0], str(m_param[1]))
             data[k] = data[k].replace('<METHOD>', args.method)
             data[k] = data[k].replace('<INPUT_SIZE>', sz)
-            data[k] = data[k].replace('<COI>', params['coi'][args.tar_domain])
-            if data[k] == '<AVAILABLE_LABELS>':
+            if data[k] == '<COI>':
+                data[k] = '0,' + str(args.coi)
+            elif data[k] == '<AVAILABLE_LABELS>':
                 data[k] = args.available_labels
-            if data[k] == '<GPU>':
+            elif data[k] == '<GPU>':
                 data[k] = args.gpu
         elif type(data[k]) == dict:
             domain = args.src_domain if k == 'src' else args.tar_domain
