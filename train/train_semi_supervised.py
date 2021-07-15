@@ -95,7 +95,7 @@ if __name__ == '__main__':
     print_frm('Starting training')
     print_frm('Training with loss: %s' % params['loss'])
     lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval='step')
-    checkpoint_callback = ModelCheckpoint(save_top_k=5, verbose=True, monitor='val/mIoU', mode='max')
+    checkpoint_callback = ModelCheckpoint(save_top_k=5, verbose=True, monitor='val/mIoU_tar', mode='max')
     trainer = pl.Trainer(max_epochs=params['epochs'], gpus=params['gpus'], accelerator=params['accelerator'],
                          default_root_dir=params['log_dir'], flush_logs_every_n_steps=params['log_freq'],
                          log_every_n_steps=params['log_freq'], callbacks=[lr_monitor, checkpoint_callback],
