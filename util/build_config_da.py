@@ -29,10 +29,10 @@ def _default_params():
 
     # method parameters
     params['method-params'][NO_DA] = []
-    params['method-params'][MMD] = [('<LAMBDA_MMD>', 1e-2)]
-    params['method-params'][DAT] = [('<LAMBDA_DAT>', 1e-2)]
-    params['method-params'][YNET] = [('<LAMBDA_REC>', 1e2)]
-    params['method-params'][UNET_TS] = [('<LAMBDA_O>', 1e4), ('<LAMBDA_W>', 1e2)]
+    params['method-params'][MMD] = [('<LAMBDA_MMD>', 0.01)]
+    params['method-params'][DAT] = [('<LAMBDA_DAT>', 0.01)]
+    params['method-params'][YNET] = [('<LAMBDA_REC>', 100)]
+    params['method-params'][UNET_TS] = [('<LAMBDA_O>', 10000), ('<LAMBDA_W>', 100)]
 
     # train/val/test split parameters
     params['train_val_test_split'][EPFL] = '0.40,0.50'
