@@ -97,9 +97,10 @@ with open(args.base_file, 'r') as f:
             for m_param in method_params:
                 data[k] = data[k].replace(m_param[0], str(m_param[1]))
             data[k] = data[k].replace('<METHOD>', args.method)
-            data[k] = data[k].replace('<AVAILABLE_LABELS>', str(args.available_labels))
             data[k] = data[k].replace('<INPUT_SIZE>', sz)
             data[k] = data[k].replace('<COI>', params['coi'][args.tar_domain])
+            if data[k] == '<AVAILABLE_LABELS>':
+                data[k] = args.available_labels
             if data[k] == '<GPU>':
                 data[k] = args.gpu
         elif type(data[k]) == dict:
