@@ -79,6 +79,7 @@ parser.add_argument("--base_file", "-b", help="Path to the base configuration fi
 parser.add_argument("--src-domain", "-ds", help="Source domain", type=str, default='EPFL')
 parser.add_argument("--tar-domain", "-dt", help="Target domain", type=str, default='VNC')
 parser.add_argument("--method", "-m", help="Method to use", type=str, default='unet-ts')
+parser.add_argument("--available_labels", "-al", help="Fraction of available target labels", type=float, default=0.0)
 parser.add_argument("--gpu", "-g", help="Index of the GPU computing device", type=int, default=0)
 args = parser.parse_args()
 
@@ -96,6 +97,7 @@ with open(args.base_file, 'r') as f:
             for m_param in method_params:
                 data[k] = data[k].replace(m_param[0], str(m_param[1]))
             data[k] = data[k].replace('<METHOD>', args.method)
+            data[k] = data[k].replace('<AVAILABLE_LABELS>', args.available_labels)
             data[k] = data[k].replace('<INPUT_SIZE>', sz)
             data[k] = data[k].replace('<COI>', params['coi'][args.tar_domain])
             if data[k] == '<GPU>':
