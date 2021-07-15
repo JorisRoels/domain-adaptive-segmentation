@@ -79,7 +79,7 @@ parser.add_argument("--base_file", "-b", help="Path to the base configuration fi
 parser.add_argument("--src-domain", "-ds", help="Source domain", type=str, default='EPFL')
 parser.add_argument("--tar-domain", "-dt", help="Target domain", type=str, default='VNC')
 parser.add_argument("--method", "-m", help="Method to use", type=str, default='unet-ts')
-parser.add_argument("--available_labels", "-al", help="Fraction of available target labels", type=float, default=0.0)
+parser.add_argument("--available-labels", "-al", help="Fraction of available target labels", type=float, default=0.0)
 parser.add_argument("--gpu", "-g", help="Index of the GPU computing device", type=int, default=0)
 parser.add_argument("--coi", "-c", help="Class of interest (1: mito, 2: er, 3: nm)", type=int, default=1)
 args = parser.parse_args()
@@ -92,9 +92,10 @@ with open(args.base_file, 'r') as f:
     data = yaml.load(f, Loader=SafeLoader)
     sz = _get_sz(params['input_size'][args.src_domain], params['input_size'][args.tar_domain])
     method_params = params['method-params'][args.method]
+    logdir = args.method + '-' + str(args.available_labels) + '-' + args.src_domain + '2' + args.tar_domain
     for k in data.keys():
         if type(data[k]) == str:
-            data[k] = data[k].replace('<DOMAIN>', args.src_domain + '2' + args.tar_domain)
+            data[k] = data[k].replace('<LOG_DIR>', logdir)
             for m_param in method_params:
                 data[k] = data[k].replace(m_param[0], str(m_param[1]))
             data[k] = data[k].replace('<METHOD>', args.method)
@@ -114,5 +115,5 @@ with open(args.base_file, 'r') as f:
 
 
 # write config file
-with open(os.path.join(os.path.dirname(args.base_file), args.src_domain + '2' + args.tar_domain + '.yaml'), 'w') as f:
+with open(os.path.join(os.path.dirname(args.base_file), logdir + '.yaml'), 'w') as f:
     documents = yaml.dump(data, f)

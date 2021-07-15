@@ -42,7 +42,7 @@ gpus: <GPU>
 num_workers: 12
 accelerator: dp
 # logging
-log_dir: train/unsupervised-da/logs/<DOMAIN>
+log_dir: train/unsupervised-da/logs/<LOG_DIR>
 log_freq: 50
 log_refresh_rate: 0
 # reproducibility
