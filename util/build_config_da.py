@@ -97,7 +97,8 @@ with open(args.base_file, 'r') as f:
         if type(data[k]) == str:
             data[k] = data[k].replace('<LOG_DIR>', logdir)
             for m_param in method_params:
-                data[k] = data[k].replace(m_param[0], str(m_param[1]))
+                if data[k] == m_param[0]:
+                    data[k] = m_param[1]
             data[k] = data[k].replace('<METHOD>', args.method)
             data[k] = data[k].replace('<INPUT_SIZE>', sz)
             if data[k] == '<COI>':
