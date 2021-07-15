@@ -1,0 +1,37 @@
+# ===========
+# CONFIG FILE
+# ===========
+#
+# method
+method: u-net  # u-net
+# data
+data: /home/jorisro/research/data-local/EM/<DOMAIN>/raw
+labels: /home/jorisro/research/data-local/EM/<DOMAIN>/labels
+train_val_test_split: <TRAIN_VAL_TEST_SPLIT>
+split_orientation: <SPLIT_ORIENTATION>
+type: pngseq
+# network
+input_size: <INPUT_SIZE>
+in_channels: 1
+fm: 64
+levels: 4
+dropout: 0.00
+norm: instance
+activation: relu
+coi: <COI>
+# optimization
+loss: dice
+lr: 0.001
+epochs: 100
+train_batch_size: 4
+test_batch_size: 4
+# compute
+gpus: <GPU>
+num_workers: 12
+accelerator: dp
+# logging
+log_dir: train/full-supervision/logs/<DOMAIN>
+log_freq: 50
+log_refresh_rate: 0
+# reproducibility
+seed: 0
