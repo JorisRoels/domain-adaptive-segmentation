@@ -96,6 +96,7 @@ with open(args.base_file, 'r') as f:
     for k in data.keys():
         if type(data[k]) == str:
             data[k] = data[k].replace('<LOG_DIR>', logdir)
+            data[k] = data[k].replace('<METHOD>', args.method)
             data[k] = data[k].replace('<INPUT_SIZE>', sz)
             if data[k] == '<COI>':
                 data[k] = '0,' + str(args.coi)
@@ -103,10 +104,10 @@ with open(args.base_file, 'r') as f:
                 data[k] = args.available_labels
             elif data[k] == '<GPU>':
                 data[k] = args.gpu
-            data[k] = data[k].replace('<METHOD>', args.method)
-            for m_param in method_params:
-                if data[k] == m_param[0]:
-                    data[k] = m_param[1]
+            else:
+                for m_param in method_params:
+                    if data[k] == m_param[0]:
+                        data[k] = m_param[1]
         elif type(data[k]) == dict:
             domain = args.src_domain if k == 'src' else args.tar_domain
             for l in data[k].keys():
