@@ -16,8 +16,8 @@ src:
   train_val_test_split: <TRAIN_VAL_TEST_SPLIT>
   split_orientation: <SPLIT_ORIENTATION>
 tar:
-  data: /home/jorisro/research/data/EM/VNC/raw
-  labels: /home/jorisro/research/data/EM/VNC/labels
+  data: /home/jorisro/research/data/EM/<DOMAIN>/raw
+  labels: /home/jorisro/research/data/EM/<DOMAIN>/labels
   train_val_test_split: <TRAIN_VAL_TEST_SPLIT>
   split_orientation: <SPLIT_ORIENTATION>
 type: pngseq
