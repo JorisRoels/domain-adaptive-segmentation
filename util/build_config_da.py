@@ -49,9 +49,8 @@ def _default_params():
         params['split_orientation'][DOM] = 'y'
 
     # input size parameters
-    for DOM in [MITOEM_H, MITOEM_R, MIRA, KASTHURI]:
-        params['input_size'][DOM] = '768,768'
-    params['input_size'][EPFL] = '512,512'
+    for DOM in [EPFL, MITOEM_H, MITOEM_R, MIRA, KASTHURI]:
+        params['input_size'][DOM] = '512,512'
     for DOM in [PO936Q, VIB_EVHELA]:
         params['input_size'][DOM] = '448,448'
     params['input_size'][UROCELL] = '256,256'
