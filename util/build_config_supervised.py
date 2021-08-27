@@ -21,12 +21,12 @@ def _default_params():
 
     params = {'train_val_test_split': {}, 'split_orientation': {}, 'input_size': {}, 'coi': {}}
 
-
     # train/val/test split parameters
     params['train_val_test_split'][EPFL] = '0.40,0.50'
-    for DOM in [UROCELL, PO936Q, MITOEM_H, MITOEM_R, MIRA, VIB_EVHELA]:
+    for DOM in [UROCELL, PO936Q, MITOEM_H, MITOEM_R, VIB_EVHELA]:
         params['train_val_test_split'][DOM] = '0.48,0.60'
     params['train_val_test_split'][VNC] = '0.30,0.50'
+    params['train_val_test_split'][MIRA] = '0.50,0.70'
     params['train_val_test_split'][KASTHURI] = '0.426,0.532'
     params['train_val_test_split'][EMBL_HELA] = '0.40,0.65'
 
@@ -37,9 +37,8 @@ def _default_params():
         params['split_orientation'][DOM] = 'y'
 
     # input size parameters
-    for DOM in [MITOEM_H, MITOEM_R, MIRA, KASTHURI]:
-        params['input_size'][DOM] = '768,768'
-    params['input_size'][EPFL] = '512,512'
+    for DOM in [EPFL, MITOEM_H, MITOEM_R, MIRA, KASTHURI]:
+        params['input_size'][DOM] = '512,512'
     for DOM in [PO936Q, VIB_EVHELA]:
         params['input_size'][DOM] = '448,448'
     params['input_size'][UROCELL] = '256,256'

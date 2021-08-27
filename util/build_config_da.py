@@ -36,9 +36,10 @@ def _default_params():
 
     # train/val/test split parameters
     params['train_val_test_split'][EPFL] = '0.40,0.50'
-    for DOM in [UROCELL, PO936Q, MITOEM_H, MITOEM_R, MIRA, VIB_EVHELA]:
+    for DOM in [UROCELL, PO936Q, MITOEM_H, MITOEM_R, VIB_EVHELA]:
         params['train_val_test_split'][DOM] = '0.48,0.60'
     params['train_val_test_split'][VNC] = '0.30,0.50'
+    params['train_val_test_split'][MIRA] = '0.50,0.70'
     params['train_val_test_split'][KASTHURI] = '0.426,0.532'
     params['train_val_test_split'][EMBL_HELA] = '0.40,0.65'
 
