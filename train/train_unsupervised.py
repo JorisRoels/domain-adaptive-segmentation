@@ -1,5 +1,5 @@
 """
-    This is a script that illustrates supervised training
+    This is a script that illustrates unsupervised domain adaptive training, i.e. without using any target labels
 """
 
 """
@@ -15,7 +15,7 @@ import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 from torch.utils.data import DataLoader
 
-from neuralnets.data.datasets import LabeledVolumeDataset, LabeledSlidingWindowDataset
+from neuralnets.data.datasets import LabeledVolumeDataset, UnlabeledSlidingWindowDataset
 from neuralnets.util.augmentation import *
 from neuralnets.util.io import print_frm
 from neuralnets.util.tools import set_seed
@@ -34,7 +34,7 @@ if __name__ == '__main__':
     print_frm('Parsing arguments')
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", "-c", help="Path to the configuration file", type=str,
-                        default='train_supervised.yaml')
+                        default='train_unsupervised.yaml')
     parser.add_argument("--clean-up", help="Boolean flag that specifies cleaning of the checkpoints",
                         action='store_true', default=False)
     args = parser.parse_args()
@@ -51,25 +51,29 @@ if __name__ == '__main__':
     """
     print_frm('Loading data')
     input_shape = (1, *(params['input_size']))
-    split = params['train_val_test_split']
+    split_src = params['src']['train_val_split']
+    split_tar = params['tar']['train_val_split']
     transform = Compose([Rotate90(), Flip(prob=0.5, dim=0), Flip(prob=0.5, dim=1), ContrastAdjust(adj=0.1),
                          AddNoise(sigma_max=0.05)])
     len_epoch = 2000
     print_frm('Train data...')
-    train = LabeledVolumeDataset(params['data'], params['labels'], input_shape=input_shape, len_epoch=len_epoch,
-                                 in_channels=params['in_channels'], type=params['type'],
-                                 batch_size=params['train_batch_size'], transform=transform,
-                                 range_split=(0, split[0]), range_dir=params['split_orientation'])
+    train = LabeledVolumeDataset((params['src']['data'], params['tar']['data']),
+                                 (params['src']['labels'], None), len_epoch=len_epoch,
+                                 input_shape=input_shape, in_channels=params['in_channels'],
+                                 type=params['type'], batch_size=params['train_batch_size'], transform=transform,
+                                 range_split=((0, split_src[0]), (0, split_tar[0])),
+                                 range_dir=(params['src']['split_orientation'], params['tar']['split_orientation']))
     print_frm('Validation data...')
-    val = LabeledVolumeDataset(params['data'], params['labels'], input_shape=input_shape, len_epoch=len_epoch,
-                               in_channels=params['in_channels'], type=params['type'],
+    val = LabeledVolumeDataset((params['src']['data'], params['tar']['data']),
+                               (params['src']['labels'], None), len_epoch=len_epoch,
+                               input_shape=input_shape, in_channels=params['in_channels'], type=params['type'],
                                batch_size=params['test_batch_size'], transform=transform,
-                               range_split=(split[0], split[1]), range_dir=params['split_orientation'])
+                               range_split=((split_src[0], 1), (split_tar[0], 1)),
+                               range_dir=(params['src']['split_orientation'], params['tar']['split_orientation']))
     print_frm('Test data...')
-    test = LabeledSlidingWindowDataset(params['data'], params['labels'], input_shape=input_shape,
-                                       in_channels=params['in_channels'], type=params['type'],
-                                       batch_size=params['test_batch_size'], transform=transform,
-                                       range_split=(split[1], 1), range_dir=params['split_orientation'])
+    test = UnlabeledSlidingWindowDataset(params['tar']['data'], input_shape=input_shape,
+                                         in_channels=params['in_channels'], type=params['type'],
+                                         batch_size=params['test_batch_size'])
     train_loader = DataLoader(train, batch_size=params['train_batch_size'], num_workers=params['num_workers'],
                               pin_memory=True)
     val_loader = DataLoader(val, batch_size=params['test_batch_size'], num_workers=params['num_workers'],
@@ -89,27 +93,27 @@ if __name__ == '__main__':
     print_frm('Starting training')
     print_frm('Training with loss: %s' % params['loss'])
     lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval='step')
-    checkpoint_callback = ModelCheckpoint(save_top_k=5, verbose=True, monitor='val/mIoU', mode='max')
     trainer = pl.Trainer(max_epochs=params['epochs'], gpus=params['gpus'], accelerator=params['accelerator'],
                          default_root_dir=params['log_dir'], flush_logs_every_n_steps=params['log_freq'],
-                         log_every_n_steps=params['log_freq'], callbacks=[lr_monitor, checkpoint_callback],
+                         log_every_n_steps=params['log_freq'], callbacks=[lr_monitor],
                          progress_bar_refresh_rate=params['log_refresh_rate'])
     t_start = time.perf_counter()
     trainer.fit(net, train_loader, val_loader)
     t_stop = time.perf_counter()
     print_frm('Elapsed training time: %d hours, %d minutes, %.2f seconds' % process_seconds(t_stop - t_start))
-    print_frm('Average time / epoch: %.d hours, %d minutes, %.2f seconds' %
+    print_frm('Average time / epoch: %.2f hours, %d minutes, %.2f seconds' %
               process_seconds((t_stop - t_start) / params['epochs']))
-
 
     """
         Testing the network
     """
     print_frm('Testing network')
     t_start = time.perf_counter()
-    trainer.test(net.get_unet(), test_loader)
+    segmentation = net.get_unet().segment(test_loader.dataset.data[0], input_shape, in_channels=params['in_channels'],
+                                          batch_size=params['test_batch_size'], track_progress=True, device=0)
     t_stop = time.perf_counter()
-    print_frm('Elapsed testing time: %d hours, %d minutes, %.2f seconds' % process_seconds(t_stop - t_start))
+    print_frm('Elapsed time segmenting the (unlabeled) test data: %d hours, %d minutes, %.2f seconds' %
+              process_seconds(t_stop - t_start))
 
     """
         Save the final model

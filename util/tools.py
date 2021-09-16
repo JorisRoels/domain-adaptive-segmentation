@@ -20,9 +20,12 @@ def parse_params(params):
     for dom in ['src', 'tar']:
         if dom in keys:
             ks = params[dom].keys()
-            if 'train_val_test_split' in ks:
-                params[dom]['train_val_test_split'] = [float(item) for item in
-                                                       params[dom]['train_val_test_split'].split(',')]
+            for split_key in ['train_val_test_split', 'train_val_split']:
+                if split_key in ks:
+                    if isinstance(params[dom][split_key], float):
+                        params[dom][split_key] = [params[dom][split_key]]
+                    else:
+                        params[dom][split_key] = [float(item) for item in params[dom][split_key].split(',')]
 
     return params
 
