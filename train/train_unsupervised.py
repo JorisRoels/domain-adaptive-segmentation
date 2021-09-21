@@ -1,6 +1,7 @@
 """
     This is a script that illustrates unsupervised domain adaptive training, i.e. without using any target labels
 """
+import numpy as np
 
 """
     Necessary libraries
@@ -12,12 +13,11 @@ import shutil
 import time
 
 import pytorch_lightning as pl
-from pytorch_lightning.callbacks import ModelCheckpoint
 from torch.utils.data import DataLoader
 
 from neuralnets.data.datasets import LabeledVolumeDataset, UnlabeledSlidingWindowDataset
 from neuralnets.util.augmentation import *
-from neuralnets.util.io import print_frm
+from neuralnets.util.io import print_frm, write_volume
 from neuralnets.util.tools import set_seed
 
 from util.tools import parse_params, process_seconds
@@ -34,7 +34,7 @@ if __name__ == '__main__':
     print_frm('Parsing arguments')
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", "-c", help="Path to the configuration file", type=str,
-                        default='train_unsupervised.yaml')
+                        default='base.yaml')
     parser.add_argument("--clean-up", help="Boolean flag that specifies cleaning of the checkpoints",
                         action='store_true', default=False)
     args = parser.parse_args()
@@ -118,8 +118,9 @@ if __name__ == '__main__':
     """
         Save the final model
     """
-    print_frm('Saving final model')
+    print_frm('Saving final model and test predictions')
     shutil.copyfile(trainer.checkpoint_callback.best_model_path, os.path.join(trainer.log_dir, 'best_model.ckpt'))
+    write_volume(np.argmax(segmentation, axis=0), os.path.join(trainer.log_dir, 'test_predictions'))
 
     """
         Clean up
