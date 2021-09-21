@@ -32,6 +32,7 @@ class UNetMMD2D(UNetDA2D):
         x, y = batch
         x_src, x_tar = x
         y_src, y_tar = y
+        tar_labels_available = y_tar.size(1) > 0
 
         # forward prop
         y_src_pred, f_src = self(x_src)
@@ -39,7 +40,7 @@ class UNetMMD2D(UNetDA2D):
 
         # compute loss
         loss_src = self.loss_fn(y_src_pred, y_src[:, 0, ...])
-        loss_tar = self.loss_fn(y_tar_pred, y_tar[:, 0, ...])
+        loss_tar = self.loss_fn(y_tar_pred, y_tar[:, 0, ...]) if tar_labels_available else 0
         loss_mmd = feature_regularization_loss(f_src, f_tar, method='mmd')
         loss = loss_src + loss_tar + self.lambda_mmd * loss_mmd
 
@@ -47,7 +48,7 @@ class UNetMMD2D(UNetDA2D):
         y_src_pred = torch.softmax(y_src_pred, dim=1)
         y_tar_pred = torch.softmax(y_tar_pred, dim=1)
         mIoU_src = self._mIoU(y_src_pred, y_src)
-        mIoU_tar = self._mIoU(y_tar_pred, y_tar)
+        mIoU_tar = self._mIoU(y_tar_pred, y_tar) if tar_labels_available else -1
         self.log('train/mIoU_src', mIoU_src, prog_bar=True)
         self.log('train/loss_src', loss_src)
         self.log('train/loss_mmd', loss_mmd, prog_bar=True)
@@ -60,7 +61,7 @@ class UNetMMD2D(UNetDA2D):
         # log images
         if batch_idx == self.train_batch_id:
             self._log_predictions(x_src, y_src, y_src_pred, prefix='train_src')
-            self._log_predictions(x_tar, y_tar, y_tar_pred, prefix='train_tar')
+            self._log_predictions(x_tar, y_tar if tar_labels_available else None, y_tar_pred, prefix='train_tar')
 
         return loss
 
@@ -70,6 +71,7 @@ class UNetMMD2D(UNetDA2D):
         x, y = batch
         x_src, x_tar = x
         y_src, y_tar = y
+        tar_labels_available = y_tar.size(1) > 0
 
         # forward prop
         y_src_pred, f_src = self(x_src)
@@ -77,7 +79,7 @@ class UNetMMD2D(UNetDA2D):
 
         # compute loss
         loss_src = self.loss_fn(y_src_pred, y_src[:, 0, ...])
-        loss_tar = self.loss_fn(y_tar_pred, y_tar[:, 0, ...])
+        loss_tar = self.loss_fn(y_tar_pred, y_tar[:, 0, ...]) if tar_labels_available else 0
         loss_mmd = feature_regularization_loss(f_src, f_tar, method='mmd')
         loss = loss_src + loss_tar + self.lambda_mmd * loss_mmd
 
@@ -85,7 +87,7 @@ class UNetMMD2D(UNetDA2D):
         y_src_pred = torch.softmax(y_src_pred, dim=1)
         y_tar_pred = torch.softmax(y_tar_pred, dim=1)
         mIoU_src = self._mIoU(y_src_pred, y_src)
-        mIoU_tar = self._mIoU(y_tar_pred, y_tar)
+        mIoU_tar = self._mIoU(y_tar_pred, y_tar) if tar_labels_available else -1
         self.log('val/mIoU_src', mIoU_src)
         self.log('val/mIoU_tar', mIoU_tar, prog_bar=True)
         self.log('val/loss_src', loss_src)
@@ -96,7 +98,7 @@ class UNetMMD2D(UNetDA2D):
         # log images
         if batch_idx == self.val_batch_id:
             self._log_predictions(x_src, y_src, y_src_pred, prefix='val_src')
-            self._log_predictions(x_tar, y_tar, y_tar_pred, prefix='val_tar')
+            self._log_predictions(x_tar, y_tar if tar_labels_available else None, y_tar_pred, prefix='val_tar')
 
         return loss
 
@@ -184,6 +186,7 @@ class UNetDAT2D(UNetDA2D):
         x, y = batch
         x_src, x_tar = x
         y_src, y_tar = y
+        tar_labels_available = y_tar.size(1) > 0
         dom_labels = torch.zeros((x_src.size(0) + x_tar.size(0))).long().to(x_src.device)
         dom_labels[x_src.size(0):] = 1
 
@@ -194,7 +197,7 @@ class UNetDAT2D(UNetDA2D):
 
         # compute loss
         loss_src = self.loss_fn(y_src_pred, y_src[:, 0, ...])
-        loss_tar = self.loss_fn(y_tar_pred, y_tar[:, 0, ...])
+        loss_tar = self.loss_fn(y_tar_pred, y_tar[:, 0, ...]) if tar_labels_available else 0
         loss_dat = self.loss_ce(dom_pred, dom_labels)
         loss = loss_src + loss_tar + self.lambda_dat * loss_dat
 
@@ -202,7 +205,7 @@ class UNetDAT2D(UNetDA2D):
         y_src_pred = torch.softmax(y_src_pred, dim=1)
         y_tar_pred = torch.softmax(y_tar_pred, dim=1)
         mIoU_src = self._mIoU(y_src_pred, y_src)
-        mIoU_tar = self._mIoU(y_tar_pred, y_tar)
+        mIoU_tar = self._mIoU(y_tar_pred, y_tar) if tar_labels_available else -1
         self.log('train/mIoU_src', mIoU_src, prog_bar=True)
         self.log('train/loss_src', loss_src)
         self.log('train/loss_dat', loss_dat, prog_bar=True)
@@ -215,7 +218,7 @@ class UNetDAT2D(UNetDA2D):
         # log images
         if batch_idx == self.train_batch_id:
             self._log_predictions(x_src, y_src, y_src_pred, prefix='train_src')
-            self._log_predictions(x_tar, y_tar, y_tar_pred, prefix='train_tar')
+            self._log_predictions(x_tar, y_tar if tar_labels_available else None, y_tar_pred, prefix='train_tar')
 
         return loss
 
@@ -225,6 +228,7 @@ class UNetDAT2D(UNetDA2D):
         x, y = batch
         x_src, x_tar = x
         y_src, y_tar = y
+        tar_labels_available = y_tar.size(1) > 0
         dom_labels = torch.zeros((x_src.size(0) + x_tar.size(0))).long().to(x_src.device)
         dom_labels[x_src.size(0):] = 1
 
@@ -235,7 +239,7 @@ class UNetDAT2D(UNetDA2D):
 
         # compute loss
         loss_src = self.loss_fn(y_src_pred, y_src[:, 0, ...])
-        loss_tar = self.loss_fn(y_tar_pred, y_tar[:, 0, ...])
+        loss_tar = self.loss_fn(y_tar_pred, y_tar[:, 0, ...]) if tar_labels_available else 0
         loss_dat = self.loss_ce(dom_pred, dom_labels)
         loss = loss_src + loss_tar + self.lambda_dat * loss_dat
 
@@ -243,7 +247,7 @@ class UNetDAT2D(UNetDA2D):
         y_src_pred = torch.softmax(y_src_pred, dim=1)
         y_tar_pred = torch.softmax(y_tar_pred, dim=1)
         mIoU_src = self._mIoU(y_src_pred, y_src)
-        mIoU_tar = self._mIoU(y_tar_pred, y_tar)
+        mIoU_tar = self._mIoU(y_tar_pred, y_tar) if tar_labels_available else -1
         self.log('val/mIoU_src', mIoU_src)
         self.log('val/mIoU_tar', mIoU_tar, prog_bar=True)
         self.log('val/loss_src', loss_src)
@@ -254,7 +258,7 @@ class UNetDAT2D(UNetDA2D):
         # log images
         if batch_idx == self.val_batch_id:
             self._log_predictions(x_src, y_src, y_src_pred, prefix='val_src')
-            self._log_predictions(x_tar, y_tar, y_tar_pred, prefix='val_tar')
+            self._log_predictions(x_tar, y_tar if tar_labels_available else None, y_tar_pred, prefix='val_tar')
 
         return loss
 
@@ -343,6 +347,7 @@ class YNet2D(UNetDA2D):
         x, y = batch
         x_src, x_tar = x
         y_src, y_tar = y
+        tar_labels_available = y_tar.size(1) > 0
 
         # forward prop
         y_src_pred, x_src_rec = self(x_src)
@@ -350,7 +355,7 @@ class YNet2D(UNetDA2D):
 
         # compute loss
         loss_src = self.loss_fn(y_src_pred, y_src[:, 0, ...])
-        loss_tar = self.loss_fn(y_tar_pred, y_tar[:, 0, ...])
+        loss_tar = self.loss_fn(y_tar_pred, y_tar[:, 0, ...]) if tar_labels_available else 0
         loss_rec = self.loss_rec(x_src_rec, x_src) + self.loss_rec(x_tar_l_rec, x_tar)
         loss = loss_src + loss_tar + self.lambda_rec * loss_rec
 
@@ -358,7 +363,7 @@ class YNet2D(UNetDA2D):
         y_src_pred = torch.softmax(y_src_pred, dim=1)
         y_tar_pred = torch.softmax(y_tar_pred, dim=1)
         mIoU_src = self._mIoU(y_src_pred, y_src)
-        mIoU_tar = self._mIoU(y_tar_pred, y_tar)
+        mIoU_tar = self._mIoU(y_tar_pred, y_tar) if tar_labels_available else -1
         self.log('train/mIoU_src', mIoU_src, prog_bar=True)
         self.log('train/loss_src', loss_src)
         self.log('train/loss_rec', loss_rec, prog_bar=True)
@@ -371,7 +376,7 @@ class YNet2D(UNetDA2D):
         # log images
         if batch_idx == self.train_batch_id:
             self._log_predictions(x_src, y_src, y_src_pred, prefix='train_src')
-            self._log_predictions(x_tar, y_tar, y_tar_pred, prefix='train_tar')
+            self._log_predictions(x_tar, y_tar if tar_labels_available else None, y_tar_pred, prefix='train_tar')
 
         return loss
 
@@ -381,6 +386,7 @@ class YNet2D(UNetDA2D):
         x, y = batch
         x_src, x_tar = x
         y_src, y_tar = y
+        tar_labels_available = y_tar.size(1) > 0
 
         # forward prop
         y_src_pred, x_src_rec = self(x_src)
@@ -388,7 +394,7 @@ class YNet2D(UNetDA2D):
 
         # compute loss
         loss_src = self.loss_fn(y_src_pred, y_src[:, 0, ...])
-        loss_tar = self.loss_fn(y_tar_pred, y_tar[:, 0, ...])
+        loss_tar = self.loss_fn(y_tar_pred, y_tar[:, 0, ...]) if tar_labels_available else 0
         loss_rec = self.loss_rec(x_src_rec, x_src) + self.loss_rec(x_tar_rec, x_tar)
         loss = loss_src + loss_tar + self.lambda_rec * loss_rec
 
@@ -396,7 +402,7 @@ class YNet2D(UNetDA2D):
         y_src_pred = torch.softmax(y_src_pred, dim=1)
         y_tar_pred = torch.softmax(y_tar_pred, dim=1)
         mIoU_src = self._mIoU(y_src_pred, y_src)
-        mIoU_tar = self._mIoU(y_tar_pred, y_tar)
+        mIoU_tar = self._mIoU(y_tar_pred, y_tar) if tar_labels_available else -1
         self.log('val/mIoU_src', mIoU_src)
         self.log('val/mIoU_tar', mIoU_tar, prog_bar=True)
         self.log('val/loss_src', loss_src)
@@ -407,7 +413,7 @@ class YNet2D(UNetDA2D):
         # log images
         if batch_idx == self.val_batch_id:
             self._log_predictions(x_src, y_src, y_src_pred, prefix='val_src')
-            self._log_predictions(x_tar, y_tar, y_tar_pred, prefix='val_tar')
+            self._log_predictions(x_tar, y_tar if tar_labels_available else None, y_tar_pred, prefix='val_tar')
 
         return loss
 
@@ -505,6 +511,7 @@ class WNet2D(UNetDA2D):
         x, y = batch
         x_src, x_tar = x
         y_src, y_tar = y
+        tar_labels_available = y_tar.size(1) > 0
         dom_labels = torch.zeros((x_src.size(0) + x_tar.size(0))).long().to(x_src.device)
         dom_labels[x_src.size(0):] = 1
 
@@ -515,7 +522,7 @@ class WNet2D(UNetDA2D):
 
         # compute loss
         loss_src = self.loss_fn(y_src_pred, y_src[:, 0, ...])
-        loss_tar = self.loss_fn(y_tar_pred, y_tar[:, 0, ...])
+        loss_tar = self.loss_fn(y_tar_pred, y_tar[:, 0, ...]) if tar_labels_available else 0
         loss_rec = self.loss_rec(x_src_rec, x_src) + self.loss_rec(x_tar_rec, x_tar)
         loss_dat = self.loss_ce(dom_pred, dom_labels)
         loss = loss_src + loss_tar + self.lambda_rec * loss_rec + self.lambda_dat * loss_dat
@@ -524,7 +531,7 @@ class WNet2D(UNetDA2D):
         y_src_pred = torch.softmax(y_src_pred, dim=1)
         y_tar_pred = torch.softmax(y_tar_pred, dim=1)
         mIoU_src = self._mIoU(y_src_pred, y_src)
-        mIoU_tar = self._mIoU(y_tar_pred, y_tar)
+        mIoU_tar = self._mIoU(y_tar_pred, y_tar) if tar_labels_available else -1
         self.log('train/mIoU_src', mIoU_src, prog_bar=True)
         self.log('train/loss_src', loss_src)
         self.log('train/loss_rec', loss_rec, prog_bar=True)
@@ -538,7 +545,7 @@ class WNet2D(UNetDA2D):
         # log images
         if batch_idx == self.train_batch_id:
             self._log_predictions(x_src, y_src, y_src_pred, prefix='train_src')
-            self._log_predictions(x_tar, y_tar, y_tar_pred, prefix='train_tar')
+            self._log_predictions(x_tar, y_tar if tar_labels_available else None, y_tar_pred, prefix='train_tar')
 
         return loss
 
@@ -548,6 +555,7 @@ class WNet2D(UNetDA2D):
         x, y = batch
         x_src, x_tar = x
         y_src, y_tar = y
+        tar_labels_available = y_tar.size(1) > 0
         dom_labels = torch.zeros((x_src.size(0) + x_tar.size(0))).long().to(x_src.device)
         dom_labels[x_src.size(0):] = 1
 
@@ -558,7 +566,7 @@ class WNet2D(UNetDA2D):
 
         # compute loss
         loss_src = self.loss_fn(y_src_pred, y_src[:, 0, ...])
-        loss_tar = self.loss_fn(y_tar_pred, y_tar[:, 0, ...])
+        loss_tar = self.loss_fn(y_tar_pred, y_tar[:, 0, ...]) if tar_labels_available else 0
         loss_rec = self.loss_rec(x_src_rec, x_src) + self.loss_rec(x_tar_rec, x_tar)
         loss_dat = self.loss_ce(dom_pred, dom_labels)
         loss = loss_src + loss_tar + self.lambda_rec * loss_rec + self.lambda_dat * loss_dat
@@ -567,7 +575,7 @@ class WNet2D(UNetDA2D):
         y_src_pred = torch.softmax(y_src_pred, dim=1)
         y_tar_pred = torch.softmax(y_tar_pred, dim=1)
         mIoU_src = self._mIoU(y_src_pred, y_src)
-        mIoU_tar = self._mIoU(y_tar_pred, y_tar)
+        mIoU_tar = self._mIoU(y_tar_pred, y_tar) if tar_labels_available else -1
         self.log('val/mIoU_src', mIoU_src)
         self.log('val/loss_src', loss_src)
         self.log('val/mIoU_tar', mIoU_tar, prog_bar=True)
@@ -579,7 +587,7 @@ class WNet2D(UNetDA2D):
         # log images
         if batch_idx == self.val_batch_id:
             self._log_predictions(x_src, y_src, y_src_pred, prefix='val_src')
-            self._log_predictions(x_tar, y_tar, y_tar_pred, prefix='val_tar')
+            self._log_predictions(x_tar, y_tar if tar_labels_available else None, y_tar_pred, prefix='val_tar')
 
         return loss
 
@@ -677,6 +685,7 @@ class UNetTS2D(UNetDA2D):
         x, y = batch
         x_src, x_tar = x
         y_src, y_tar = y
+        tar_labels_available = y_tar.size(1) > 0
 
         # forward prop
         y_src_pred, f_src = self(x_src, target=False)
@@ -684,7 +693,7 @@ class UNetTS2D(UNetDA2D):
 
         # compute loss
         loss_src = self.loss_fn(y_src_pred, y_src[:, 0, ...])
-        loss_tar = self.loss_fn(y_tar_pred, y_tar[:, 0, ...])
+        loss_tar = self.loss_fn(y_tar_pred, y_tar[:, 0, ...]) if tar_labels_available else 0
         loss_o = feature_regularization_loss(f_src, f_tar, method='coral', n_samples=self.n_samples_coral)
         loss_w = self._param_regularization_loss()
         loss = loss_src + loss_tar + self.lambda_o * loss_o + self.lambda_w * loss_w
@@ -693,7 +702,7 @@ class UNetTS2D(UNetDA2D):
         y_src_pred = torch.softmax(y_src_pred, dim=1)
         y_tar_pred = torch.softmax(y_tar_pred, dim=1)
         mIoU_src = self._mIoU(y_src_pred, y_src)
-        mIoU_tar = self._mIoU(y_tar_pred, y_tar)
+        mIoU_tar = self._mIoU(y_tar_pred, y_tar) if tar_labels_available else -1
         self.log('train/mIoU_src', mIoU_src, prog_bar=True)
         self.log('train/loss_src', loss_src)
         self.log('train/loss_o', loss_o, prog_bar=True)
@@ -707,7 +716,7 @@ class UNetTS2D(UNetDA2D):
         # log images
         if batch_idx == self.train_batch_id:
             self._log_predictions(x_src, y_src, y_src_pred, prefix='train_src')
-            self._log_predictions(x_tar, y_tar, y_tar_pred, prefix='train_tar')
+            self._log_predictions(x_tar, y_tar if tar_labels_available else None, y_tar_pred, prefix='train_tar')
 
         return loss
 
@@ -717,6 +726,7 @@ class UNetTS2D(UNetDA2D):
         x, y = batch
         x_src, x_tar = x
         y_src, y_tar = y
+        tar_labels_available = y_tar.size(1) > 0
 
         # forward prop
         y_src_pred, f_src = self(x_src, target=False)
@@ -724,7 +734,7 @@ class UNetTS2D(UNetDA2D):
 
         # compute loss
         loss_src = self.loss_fn(y_src_pred, y_src[:, 0, ...])
-        loss_tar = self.loss_fn(y_tar_pred, y_tar[:, 0, ...])
+        loss_tar = self.loss_fn(y_tar_pred, y_tar[:, 0, ...]) if tar_labels_available else 0
         loss_o = feature_regularization_loss(f_src, f_tar, method='coral', n_samples=self.n_samples_coral)
         loss_w = self._param_regularization_loss()
         loss = loss_src + loss_tar + self.lambda_o * loss_o + self.lambda_w * loss_w
@@ -733,7 +743,7 @@ class UNetTS2D(UNetDA2D):
         y_src_pred = torch.softmax(y_src_pred, dim=1)
         y_tar_pred = torch.softmax(y_tar_pred, dim=1)
         mIoU_src = self._mIoU(y_src_pred, y_src)
-        mIoU_tar = self._mIoU(y_tar_pred, y_tar)
+        mIoU_tar = self._mIoU(y_tar_pred, y_tar) if tar_labels_available else -1
         self.log('val/mIoU_src', mIoU_src)
         self.log('val/loss_src', loss_src)
         self.log('val/mIoU_tar', mIoU_tar, prog_bar=True)
@@ -745,7 +755,7 @@ class UNetTS2D(UNetDA2D):
         # log images
         if batch_idx == self.train_batch_id:
             self._log_predictions(x_src, y_src, y_src_pred, prefix='val_src')
-            self._log_predictions(x_tar, y_tar, y_tar_pred, prefix='val_tar')
+            self._log_predictions(x_tar, y_tar if tar_labels_available else None, y_tar_pred, prefix='val_tar')
 
         return loss
 
