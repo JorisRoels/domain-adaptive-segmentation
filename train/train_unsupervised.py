@@ -110,7 +110,7 @@ if __name__ == '__main__':
     """
     print_frm('Testing network')
     t_start = time.perf_counter()
-    segment_read(test_loader.dataset.data[0], net.get_unet(), input_shape,
+    segment_read(params['tar']['data'], net.get_unet(), input_shape,
                  os.path.join(trainer.log_dir, 'test_predictions'), in_channels=params['in_channels'],
                  batch_size=params['test_batch_size'], track_progress=True, device=0)
     t_stop = time.perf_counter()
