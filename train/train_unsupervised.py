@@ -19,6 +19,7 @@ from neuralnets.data.datasets import LabeledVolumeDataset, UnlabeledSlidingWindo
 from neuralnets.util.augmentation import *
 from neuralnets.util.io import print_frm, write_volume
 from neuralnets.util.tools import set_seed
+from neuralnets.util.validation import segment_read
 
 from util.tools import parse_params, process_seconds
 from networks.factory import generate_model
@@ -109,10 +110,11 @@ if __name__ == '__main__':
     """
     print_frm('Testing network')
     t_start = time.perf_counter()
-    segmentation = net.get_unet().segment(test_loader.dataset.data[0], input_shape, in_channels=params['in_channels'],
-                                          batch_size=params['test_batch_size'], track_progress=True, device=0)
+    segment_read(test_loader.dataset.data[0], net.get_unet(), input_shape,
+                 os.path.join(trainer.log_dir, 'test_predictions'), in_channels=params['in_channels'],
+                 batch_size=params['test_batch_size'], track_progress=True, device=0)
     t_stop = time.perf_counter()
-    print_frm('Elapsed time segmenting the (unlabeled) test data: %d hours, %d minutes, %.2f seconds' %
+    print_frm('Elapsed time segmenting and writing the (unlabeled) test data: %d hours, %d minutes, %.2f seconds' %
               process_seconds(t_stop - t_start))
 
     """
@@ -120,7 +122,6 @@ if __name__ == '__main__':
     """
     print_frm('Saving final model and test predictions')
     shutil.copyfile(trainer.checkpoint_callback.best_model_path, os.path.join(trainer.log_dir, 'best_model.ckpt'))
-    write_volume(np.argmax(segmentation, axis=0), os.path.join(trainer.log_dir, 'test_predictions'))
 
     """
         Clean up
