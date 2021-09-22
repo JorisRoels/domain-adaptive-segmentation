@@ -19,6 +19,7 @@ from neuralnets.data.datasets import LabeledVolumeDataset, LabeledSlidingWindowD
 from neuralnets.util.augmentation import *
 from neuralnets.util.io import print_frm
 from neuralnets.util.tools import set_seed
+from neuralnets.util.validation import validate
 
 from util.tools import parse_params, process_seconds
 from networks.factory import generate_model
@@ -57,16 +58,16 @@ if __name__ == '__main__':
     len_epoch = 2000
     print_frm('Train data...')
     train = LabeledVolumeDataset(params['data'], params['labels'], input_shape=input_shape, len_epoch=len_epoch,
-                                 in_channels=params['in_channels'], type=params['type'],
+                                 coi=params['coi'], in_channels=params['in_channels'], type=params['type'],
                                  batch_size=params['train_batch_size'], transform=transform,
                                  range_split=(0, split[0]), range_dir=params['split_orientation'])
     print_frm('Validation data...')
     val = LabeledVolumeDataset(params['data'], params['labels'], input_shape=input_shape, len_epoch=len_epoch,
-                               in_channels=params['in_channels'], type=params['type'],
+                               coi=params['coi'], in_channels=params['in_channels'], type=params['type'],
                                batch_size=params['test_batch_size'], transform=transform,
                                range_split=(split[0], split[1]), range_dir=params['split_orientation'])
     print_frm('Test data...')
-    test = LabeledSlidingWindowDataset(params['data'], params['labels'], input_shape=input_shape,
+    test = LabeledSlidingWindowDataset(params['data'], params['labels'], input_shape=input_shape, coi=params['coi'],
                                        in_channels=params['in_channels'], type=params['type'],
                                        batch_size=params['test_batch_size'], transform=transform,
                                        range_split=(split[1], 1), range_dir=params['split_orientation'])
@@ -107,9 +108,12 @@ if __name__ == '__main__':
     """
     print_frm('Testing network')
     t_start = time.perf_counter()
-    trainer.test(net.get_unet(), test_loader)
+    validate(net.get_unet(), test.data[0], test.labels[0], input_shape[1:], in_channels=params['in_channels'],
+             classes_of_interest=params['coi'], batch_size=params['test_batch_size'],
+             write_dir=os.path.join(trainer.log_dir, 'best_predictions'),
+             val_file=os.path.join(trainer.log_dir, 'metrics.npy'), device=params['gpus'])
     t_stop = time.perf_counter()
-    print_frm('Elapsed testing time: %d hours, %d minutes, %.2f seconds' % process_seconds(t_stop - t_start))
+    print_frm('Elapsed validation time: %d hours, %d minutes, %.2f seconds' % process_seconds(t_stop - t_start))
 
     """
         Save the final model
