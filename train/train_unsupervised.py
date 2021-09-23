@@ -112,7 +112,7 @@ if __name__ == '__main__':
     t_start = time.perf_counter()
     segment_read(params['tar']['data'], net.get_unet(), input_shape[1:],
                  os.path.join(trainer.log_dir, 'test_predictions'), in_channels=params['in_channels'],
-                 batch_size=params['test_batch_size'], track_progress=True, device=0)
+                 batch_size=params['test_batch_size'], track_progress=True, device=params['gpus'][0])
     t_stop = time.perf_counter()
     print_frm('Elapsed time segmenting and writing the (unlabeled) test data: %d hours, %d minutes, %.2f seconds' %
               process_seconds(t_stop - t_start))

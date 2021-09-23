@@ -116,7 +116,7 @@ if __name__ == '__main__':
     validate(net.get_unet(), test.data[0], test.labels[0], input_shape[1:], in_channels=params['in_channels'],
              classes_of_interest=params['coi'], batch_size=params['test_batch_size'],
              write_dir=os.path.join(trainer.log_dir, 'best_predictions'),
-             val_file=os.path.join(trainer.log_dir, 'metrics.npy'), device=params['gpus'])
+             val_file=os.path.join(trainer.log_dir, 'metrics.npy'), device=params['gpus'][0])
     t_stop = time.perf_counter()
     print_frm('Elapsed testing time: %d hours, %d minutes, %.2f seconds' % process_seconds(t_stop - t_start))
 
