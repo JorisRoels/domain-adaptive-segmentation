@@ -64,7 +64,7 @@ if __name__ == '__main__':
                                  type=params['type'], batch_size=params['train_batch_size'], transform=transform,
                                  range_split=((0, split_src[0]), (0, split_tar[0])),
                                  range_dir=(params['src']['split_orientation'], params['tar']['split_orientation']),
-                                 partial_labels=(1, params['tar_labels_available']))
+                                 partial_labels=(1, params['tar_labels_available']), seed=params['seed'])
     print_frm('Validation data...')
     val = LabeledVolumeDataset((params['src']['data'], params['tar']['data']),
                                (params['src']['labels'], params['tar']['labels']), len_epoch=len_epoch,
