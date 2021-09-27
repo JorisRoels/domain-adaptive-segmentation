@@ -41,12 +41,12 @@ def _default_params():
     params['train_val_test_split'][VNC] = '0.30,0.50'
     params['train_val_test_split'][MIRA] = '0.50,0.70'
     params['train_val_test_split'][KASTHURI] = '0.426,0.532'
-    params['train_val_test_split'][EMBL_HELA] = '0.40,0.65'
+    params['train_val_test_split'][EMBL_HELA] = '0.50,0.75'
 
     # split orientation parameters
-    for DOM in [EPFL, UROCELL, PO936Q, MITOEM_H, MITOEM_R, KASTHURI, VIB_EVHELA]:
+    for DOM in [EPFL, UROCELL, PO936Q, MITOEM_H, MITOEM_R, KASTHURI, VIB_EVHELA, EMBL_HELA]:
         params['split_orientation'][DOM] = 'z'
-    for DOM in [MIRA, VNC, EMBL_HELA]:
+    for DOM in [MIRA, VNC]:
         params['split_orientation'][DOM] = 'y'
 
     # input size parameters
@@ -54,9 +54,9 @@ def _default_params():
         params['input_size'][DOM] = '512,512'
     for DOM in [PO936Q, VIB_EVHELA]:
         params['input_size'][DOM] = '448,448'
-    params['input_size'][UROCELL] = '256,256'
+    for DOM in [UROCELL, EMBL_HELA]:
+        params['input_size'][DOM] = '256,256'
     params['input_size'][VNC] = '192,192'
-    params['input_size'][EMBL_HELA] = '128,128'
 
     return params
 
