@@ -5,44 +5,40 @@ from networks.da import *
 
 def generate_model(name, params):
 
-    if name == 'u-net':
+    if name == 'u-net' or name == 'no-da':
         return UNetDA2D(in_channels=params['in_channels'], feature_maps=params['fm'], levels=params['levels'],
                         dropout_enc=params['dropout'], dropout_dec=params['dropout'], norm=params['norm'],
-                        activation=params['activation'], coi=params['coi'], loss_fn=params['loss'])
-    elif name == 'no-da':
-        return UNetNoDA2D(in_channels=params['in_channels'], feature_maps=params['fm'], levels=params['levels'],
-                          dropout_enc=params['dropout'], dropout_dec=params['dropout'], norm=params['norm'],
-                          activation=params['activation'], coi=params['coi'], loss_fn=params['loss'])
+                        activation=params['activation'], coi=params['coi'], loss_fn=params['loss'], lr=params['lr'])
     elif name == 'mmd':
         return UNetMMD2D(in_channels=params['in_channels'], feature_maps=params['fm'], levels=params['levels'],
                          dropout_enc=params['dropout'], dropout_dec=params['dropout'], norm=params['norm'],
-                         activation=params['activation'], coi=params['coi'], loss_fn=params['loss'],
+                         activation=params['activation'], coi=params['coi'], loss_fn=params['loss'], lr=params['lr'],
                          lambda_mmd=params['lambda_mmd'])
     elif name == 'dat':
         return UNetDAT2D(in_channels=params['in_channels'], feature_maps=params['fm'], levels=params['levels'],
                          dropout_enc=params['dropout'], dropout_dec=params['dropout'], norm=params['norm'],
-                         activation=params['activation'], coi=params['coi'], loss_fn=params['loss'],
+                         activation=params['activation'], coi=params['coi'], loss_fn=params['loss'], lr=params['lr'],
                          lambda_dat=params['lambda_dat'], input_shape=params['input_size'])
     elif name == 'ynet':
         return YNet2D(in_channels=params['in_channels'], feature_maps=params['fm'], levels=params['levels'],
                       dropout_enc=params['dropout'], dropout_dec=params['dropout'], norm=params['norm'],
-                      activation=params['activation'], coi=params['coi'], loss_fn=params['loss'],
+                      activation=params['activation'], coi=params['coi'], loss_fn=params['loss'], lr=params['lr'],
                       lambda_rec=params['lambda_rec'])
     elif name == 'wnet':
         return WNet2D(in_channels=params['in_channels'], feature_maps=params['fm'], levels=params['levels'],
                       dropout_enc=params['dropout'], dropout_dec=params['dropout'], norm=params['norm'],
-                      activation=params['activation'], coi=params['coi'], loss_fn=params['loss'],
+                      activation=params['activation'], coi=params['coi'], loss_fn=params['loss'], lr=params['lr'],
                       lambda_rec=params['lambda_rec'], lambda_dat=params['lambda_dat'],
                       input_shape=params['input_size'])
     elif name == 'unet-ts':
         return UNetTS2D(in_channels=params['in_channels'], feature_maps=params['fm'], levels=params['levels'],
                         dropout_enc=params['dropout'], dropout_dec=params['dropout'], norm=params['norm'],
-                        activation=params['activation'], coi=params['coi'], loss_fn=params['loss'],
+                        activation=params['activation'], coi=params['coi'], loss_fn=params['loss'], lr=params['lr'],
                         lambda_w=params['lambda_w'], lambda_o=params['lambda_o'])
     else:
-        return UNetNoDA2D(in_channels=params['in_channels'], feature_maps=params['fm'], levels=params['levels'],
-                          dropout_enc=params['dropout'], dropout_dec=params['dropout'], norm=params['norm'],
-                          activation=params['activation'], coi=params['coi'], loss_fn=params['loss'])
+        return UNetDA2D(in_channels=params['in_channels'], feature_maps=params['fm'], levels=params['levels'],
+                        dropout_enc=params['dropout'], dropout_dec=params['dropout'], norm=params['norm'],
+                        activation=params['activation'], coi=params['coi'], loss_fn=params['loss'], lr=params['lr'])
 
 
 def generate_classifier(name, params, dataset, transform):

@@ -1,5 +1,75 @@
 
+
+from torch.utils.data import DataLoader
+
+from neuralnets.data.datasets import LabeledVolumeDataset, LabeledSlidingWindowDataset
 from neuralnets.util.tools import parse_params as parse_params_base
+from neuralnets.util.io import print_frm
+from neuralnets.util.augmentation import *
+
+
+def get_dataloaders(params, domain=None, domain_labels_available=1.0, supervised=False):
+
+    input_shape = (1, *(params['input_size']))
+    transform = Compose([Rotate90(), Flip(prob=0.5, dim=0), Flip(prob=0.5, dim=1), ContrastAdjust(adj=0.1),
+                         AddNoise(sigma_max=0.05)])
+    len_epoch = 2000
+
+    if domain is None:
+
+        split_src = params['src']['train_val_test_split']
+        split_tar = params['tar']['train_val_test_split']
+        print_frm('Train data...')
+        train = LabeledVolumeDataset((params['src']['data'], params['tar']['data']),
+                                     (params['src']['labels'], params['tar']['labels']), len_epoch=len_epoch,
+                                     input_shape=input_shape, in_channels=params['in_channels'],
+                                     type=params['type'], batch_size=params['train_batch_size'], transform=transform,
+                                     range_split=((0, split_src[0]), (0, split_tar[0])),
+                                     range_dir=(params['src']['split_orientation'], params['tar']['split_orientation']),
+                                     partial_labels=(1, params['tar_labels_available']), seed=params['seed'])
+        print_frm('Validation data...')
+        val = LabeledVolumeDataset((params['src']['data'], params['tar']['data']),
+                                   (params['src']['labels'], params['tar']['labels']), len_epoch=len_epoch,
+                                   input_shape=input_shape, in_channels=params['in_channels'], type=params['type'],
+                                   batch_size=params['test_batch_size'], transform=transform,
+                                   range_split=((split_src[0], split_src[1]), (split_tar[0], split_tar[1])),
+                                   range_dir=(params['src']['split_orientation'], params['tar']['split_orientation']))
+        print_frm('Test data...')
+        test = LabeledSlidingWindowDataset(params['tar']['data'], params['tar']['labels'], input_shape=input_shape,
+                                           in_channels=params['in_channels'], type=params['type'],
+                                           batch_size=params['test_batch_size'], transform=transform,
+                                           range_split=(split_tar[1], 1), range_dir=params['tar']['split_orientation'])
+
+    else:
+
+        split = params['train_val_test_split'] if supervised else params[domain]['train_val_test_split']
+        data = params['data'] if supervised else params[domain]['data']
+        labels = params['labels'] if supervised else params[domain]['labels']
+        range_dir = params['split_orientation'] if supervised else params[domain]['split_orientation']
+        print_frm('Train data...')
+        train = LabeledVolumeDataset(data, labels, len_epoch=len_epoch, input_shape=input_shape,
+                                     in_channels=params['in_channels'], type=params['type'],
+                                     batch_size=params['train_batch_size'], transform=transform,
+                                     range_split=(0, split[0]), range_dir=range_dir,
+                                     partial_labels=domain_labels_available, seed=params['seed'])
+        print_frm('Validation data...')
+        val = LabeledVolumeDataset(data, labels, len_epoch=len_epoch, input_shape=input_shape,
+                                   in_channels=params['in_channels'], type=params['type'],
+                                   batch_size=params['test_batch_size'], transform=transform,
+                                   range_split=(split[0], split[1]), range_dir=range_dir)
+        print_frm('Test data...')
+        test = LabeledSlidingWindowDataset(data, labels, input_shape=input_shape, in_channels=params['in_channels'],
+                                           type=params['type'], batch_size=params['test_batch_size'],
+                                           transform=transform, range_split=(split[1], 1), range_dir=range_dir)
+
+    train_loader = DataLoader(train, batch_size=params['train_batch_size'], num_workers=params['num_workers'],
+                              pin_memory=True)
+    val_loader = DataLoader(val, batch_size=params['test_batch_size'], num_workers=params['num_workers'],
+                            pin_memory=True)
+    test_loader = DataLoader(test, batch_size=params['test_batch_size'], num_workers=params['num_workers'],
+                             pin_memory=True)
+
+    return train_loader, val_loader, test_loader
 
 
 def parse_params(params):

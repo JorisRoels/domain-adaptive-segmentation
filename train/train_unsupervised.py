@@ -35,7 +35,7 @@ if __name__ == '__main__':
     print_frm('Parsing arguments')
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", "-c", help="Path to the configuration file", type=str,
-                        default='base.yaml')
+                        default='clem1.yaml')
     parser.add_argument("--clean-up", help="Boolean flag that specifies cleaning of the checkpoints",
                         action='store_true', default=False)
     args = parser.parse_args()
