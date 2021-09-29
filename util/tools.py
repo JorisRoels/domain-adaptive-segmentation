@@ -1,5 +1,3 @@
-
-
 from torch.utils.data import DataLoader
 
 from neuralnets.data.datasets import LabeledVolumeDataset, LabeledSlidingWindowDataset
@@ -42,12 +40,13 @@ def get_dataloaders(params, domain=None, domain_labels_available=1.0, supervised
 
     input_shape = (1, *(params['input_size']))
     transform = get_transforms(params['augmentation'], coi=params['coi'])
+    print_frm('Applying data augmentation! Specifically %s' % str(params['augmentation']))
 
     if domain is None:
 
         split_src = params['src']['train_val_test_split']
         split_tar = params['tar']['train_val_test_split']
-        print_frm('Train data...')
+        print_frm('Train data... ')
         train = LabeledVolumeDataset((params['src']['data'], params['tar']['data']),
                                      (params['src']['labels'], params['tar']['labels']), len_epoch=params['len_epoch'],
                                      input_shape=input_shape, in_channels=params['in_channels'],
@@ -67,6 +66,12 @@ def get_dataloaders(params, domain=None, domain_labels_available=1.0, supervised
                                            in_channels=params['in_channels'], type=params['type'],
                                            batch_size=params['test_batch_size'], transform=transform,
                                            range_split=(split_tar[1], 1), range_dir=params['tar']['split_orientation'])
+
+        print_frm('Train volume shape: %s (source) - %s (target)' % (str(train.data[0].shape), str(train.data[1].shape)))
+        print_frm('Available target labels for training: %.1f (i.e. %.2f MV)' % (params['tar_labels_available']*100,
+                                            np.prod(train.data[1].shape)*params['tar_labels_available'] / 1000 / 1000))
+        print_frm('Validation volume shape: %s (source) - %s (target)' % (str(val.data[0].shape), str(val.data[1].shape)))
+        print_frm('Test volume shape: %s (target)' % str(test.data[0].shape))
 
     else:
 
@@ -89,6 +94,12 @@ def get_dataloaders(params, domain=None, domain_labels_available=1.0, supervised
         test = LabeledSlidingWindowDataset(data, labels, input_shape=input_shape, in_channels=params['in_channels'],
                                            type=params['type'], batch_size=params['test_batch_size'],
                                            transform=transform, range_split=(split[1], 1), range_dir=range_dir)
+
+        print_frm('Train volume shape: %s' % str(train.data[0].shape))
+        print_frm('Available labels for training: %d%% (i.e. %.2f MV)' % (domain_labels_available*100,
+                                                    np.prod(train.data[0].shape)*domain_labels_available / 1000 / 1000))
+        print_frm('Validation volume shape: %s' % str(val.data[0].shape))
+        print_frm('Test volume shape: %s' % str(test.data[0].shape))
 
     train_loader = DataLoader(train, batch_size=params['train_batch_size'], num_workers=params['num_workers'],
                               pin_memory=True)
