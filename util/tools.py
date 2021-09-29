@@ -41,8 +41,7 @@ def get_transforms(tfs, coi=None):
 def get_dataloaders(params, domain=None, domain_labels_available=1.0, supervised=False):
 
     input_shape = (1, *(params['input_size']))
-    transform = get_transforms(params['augmentation'])
-    len_epoch = 2000
+    transform = get_transforms(params['augmentation'], coi=params['coi'])
 
     if domain is None:
 
@@ -50,7 +49,7 @@ def get_dataloaders(params, domain=None, domain_labels_available=1.0, supervised
         split_tar = params['tar']['train_val_test_split']
         print_frm('Train data...')
         train = LabeledVolumeDataset((params['src']['data'], params['tar']['data']),
-                                     (params['src']['labels'], params['tar']['labels']), len_epoch=len_epoch,
+                                     (params['src']['labels'], params['tar']['labels']), len_epoch=params['len_epoch'],
                                      input_shape=input_shape, in_channels=params['in_channels'],
                                      type=params['type'], batch_size=params['train_batch_size'], transform=transform,
                                      range_split=((0, split_src[0]), (0, split_tar[0])),
@@ -58,7 +57,7 @@ def get_dataloaders(params, domain=None, domain_labels_available=1.0, supervised
                                      partial_labels=(1, params['tar_labels_available']), seed=params['seed'])
         print_frm('Validation data...')
         val = LabeledVolumeDataset((params['src']['data'], params['tar']['data']),
-                                   (params['src']['labels'], params['tar']['labels']), len_epoch=len_epoch,
+                                   (params['src']['labels'], params['tar']['labels']), len_epoch=params['len_epoch'],
                                    input_shape=input_shape, in_channels=params['in_channels'], type=params['type'],
                                    batch_size=params['test_batch_size'], transform=transform,
                                    range_split=((split_src[0], split_src[1]), (split_tar[0], split_tar[1])),
@@ -76,13 +75,13 @@ def get_dataloaders(params, domain=None, domain_labels_available=1.0, supervised
         labels = params['labels'] if supervised else params[domain]['labels']
         range_dir = params['split_orientation'] if supervised else params[domain]['split_orientation']
         print_frm('Train data...')
-        train = LabeledVolumeDataset(data, labels, len_epoch=len_epoch, input_shape=input_shape,
+        train = LabeledVolumeDataset(data, labels, len_epoch=params['len_epoch'], input_shape=input_shape,
                                      in_channels=params['in_channels'], type=params['type'],
                                      batch_size=params['train_batch_size'], transform=transform,
                                      range_split=(0, split[0]), range_dir=range_dir,
                                      partial_labels=domain_labels_available, seed=params['seed'])
         print_frm('Validation data...')
-        val = LabeledVolumeDataset(data, labels, len_epoch=len_epoch, input_shape=input_shape,
+        val = LabeledVolumeDataset(data, labels, len_epoch=params['len_epoch'], input_shape=input_shape,
                                    in_channels=params['in_channels'], type=params['type'],
                                    batch_size=params['test_batch_size'], transform=transform,
                                    range_split=(split[0], split[1]), range_dir=range_dir)
