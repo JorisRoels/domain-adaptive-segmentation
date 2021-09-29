@@ -20,6 +20,7 @@ tar:
   train_val_split: 0.50
   split_orientation: z
 type: pngseq
+augmentation: rot90,flipx,flipy,contrast,deformation,noise  # options: rot90,flipx,flipy,contrast,deformation,noise
 # network
 input_size: 256,256
 in_channels: 1
@@ -33,6 +34,7 @@ coi: 0,1
 loss: dice
 lr: 0.001
 epochs: 5
+len_epoch: 2000
 train_batch_size: 4
 test_batch_size: 4
 # compute

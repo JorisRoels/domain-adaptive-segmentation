@@ -10,6 +10,7 @@ labels: /home/jorisro/research/data/EM/VNC/labels
 train_val_test_split: 0.50,0.75
 split_orientation: z
 type: pngseq
+augmentation: rot90,flipx,flipy,contrast,deformation,noise  # options: rot90,flipx,flipy,contrast,deformation,noise
 # network
 input_size: 256,256
 in_channels: 1
@@ -22,7 +23,8 @@ coi: 0,1
 # optimization
 loss: dice
 lr: 0.001
-epochs: 1
+epochs: 100
+len_epoch: 2000
 train_batch_size: 4
 test_batch_size: 4
 # compute
