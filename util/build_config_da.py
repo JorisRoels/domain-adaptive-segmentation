@@ -69,7 +69,7 @@ def _get_sz(src_sz, tar_sz):
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--base_file", "-b", help="Path to the base configuration file", type=str, default='base.yaml')
+parser.add_argument("--base_file", "-b", help="Path to the base configuration file", type=str, default='clem1.yaml')
 parser.add_argument("--src-domain", "-ds", help="Source domain", type=str, default='EPFL')
 parser.add_argument("--tar-domain", "-dt", help="Target domain", type=str, default='VNC')
 parser.add_argument("--method", "-m", help="Method to use", type=str, default='unet-ts')

@@ -55,7 +55,7 @@ def _default_params():
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--base_file", "-b", help="Path to the base configuration file", type=str, default='base.yaml')
+parser.add_argument("--base_file", "-b", help="Path to the base configuration file", type=str, default='clem1.yaml')
 parser.add_argument("--domain", "-d", help="Target domain", type=str, default='epfl')
 parser.add_argument("--gpu", "-g", help="Index of the GPU computing device", type=int, default=0)
 args = parser.parse_args()
