@@ -10,6 +10,7 @@ labels: /home/jorisro/research/data-local/EM/<DOMAIN>/labels
 train_val_test_split: <TRAIN_VAL_TEST_SPLIT>
 split_orientation: <SPLIT_ORIENTATION>
 type: pngseq
+augmentation: rot90,flipx,flipy,contrast,noise
 # network
 input_size: <INPUT_SIZE>
 in_channels: 1
@@ -23,6 +24,7 @@ coi: <COI>
 loss: dice
 lr: 0.001
 epochs: 100
+len_epoch: 2000
 train_batch_size: 4
 test_batch_size: 4
 # compute
