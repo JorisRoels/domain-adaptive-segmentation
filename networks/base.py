@@ -216,14 +216,17 @@ class UNetDA2D(UNet2D):
 
         return loss
 
-    def get_unet(self):
+    def get_unet(self, load_best=True):
         """
         Get the segmentation network branch
+
+        :param load_best: flag that specifies whether the best model should be loaded (True by default)
         :return: a U-Net module
         """
 
         # load parameters of best model
-        self.load_state_dict(torch.load(self.trainer.checkpoint_callback.best_model_path)['state_dict'])
+        if load_best:
+            self.load_state_dict(torch.load(self.trainer.checkpoint_callback.best_model_path)['state_dict'])
 
         # initialize new UNet2D model
         net = UNet2D(in_channels=self.encoder.in_channels, coi=self.coi, feature_maps=self.encoder.feature_maps,
