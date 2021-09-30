@@ -35,6 +35,7 @@ if __name__ == '__main__':
     parser.add_argument("--block_wise", "-bw", help="Flag that specifies to compute block wise or not",
                         action='store_true', default=False)
     parser.add_argument("--output", "-o", help="Path to store the output segmentation", type=str, required=True)
+    parser.add_argument("--gpu", "-g", help="GPU device for computations", type=int, default=0)
     args = parser.parse_args()
     with open(args.config) as file:
         params = parse_params(yaml.load(file, Loader=yaml.FullLoader))
@@ -67,10 +68,10 @@ if __name__ == '__main__':
     if args.block_wise:
         segment_read(args.dataset, net.get_unet(load_best=False), params['input_size'], write_dir=args.output,
                      in_channels=params['in_channels'], batch_size=params['test_batch_size'], track_progress=True,
-                     device=params['gpus'][0])
+                     device=args.gpu)
     else:
         segment_ram(x, net.get_unet(load_best=False), params['input_size'],
                     write_dir=args.output, in_channels=params['in_channels'], batch_size=params['test_batch_size'],
-                    track_progress=True, device=params['gpus'][0])
+                    track_progress=True, device=args.gpu)
     t_stop = time.perf_counter()
     print_frm('Elapsed segmentation time: %d hours, %d minutes, %.2f seconds' % process_seconds(t_stop - t_start))
