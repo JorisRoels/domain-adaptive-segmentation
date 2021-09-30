@@ -51,7 +51,7 @@ if __name__ == '__main__':
     print_frm('Building the network')
     net = generate_model(params['method'], params)
     print_frm('Loading model parameters')
-    net.load_state_dict(torch.load(args.model)['state_dict'])
+    net.load_state_dict(torch.load(args.model, map_location=torch.device('cuda:' + str(args.gpu)))['state_dict'])
 
     """
         Load the data if necessary (can also be done block-wise)
