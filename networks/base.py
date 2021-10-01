@@ -162,7 +162,7 @@ def coral(source, target):
 
     # frobenius norm between source and target
     loss = torch.mean(torch.mul((xc - xct), (xc - xct)))
-    loss = loss / (4*d*d)
+    # loss = loss / (4*d*d)
 
     return loss
 
@@ -176,7 +176,7 @@ def mmd(source, target, gamma=10**3):
     """
     K_XX, K_XY, K_YY, d = _mix_rbf_kernel(source, target, [gamma])
 
-    return _mmd2(K_XX, K_XY, K_YY, const_diagonal=False, biased=True)
+    return _mmd2(K_XX, K_XY, K_YY, const_diagonal=False, biased=True) / source.size(1)
 
 
 class ReverseLayerF(Function):
