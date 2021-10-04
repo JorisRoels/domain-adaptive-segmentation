@@ -21,22 +21,22 @@ VALUES=<VALUES>
 COI=1
 
 # run experiments (first build the script, then run it)
-CONFIG_FILE=${METHOD}-${AVAILABLE_LABELS}-${DOMAIN_SRC}2${DOMAIN_TAR}
-python $PROJECT_DIR/util/build_config_da.py -b $PROJECT_DIR/train/unsupervised-da/config/base.yaml -ds ${DOMAIN_SRC} -dt ${DOMAIN_TAR} -m $METHOD -al $AVAILABLE_LABELS -c $COI -g 0 -p $PARAMS -v $VALUES
-python $PROJECT_DIR/train/train_semi_supervised.py -c $PROJECT_DIR/train/unsupervised-da/config/${CONFIG_FILE}.yaml --clean-up &> $PROJECT_DIR/train/unsupervised-da/logs/${CONFIG_FILE}.logs
+CONFIG_FILE=${METHOD}-<N_PARAM>
+python $PROJECT_DIR/util/build_config_da.py -b $PROJECT_DIR/train/gs/config/base.yaml -ds ${DOMAIN_SRC} -dt ${DOMAIN_TAR} -m $METHOD -al $AVAILABLE_LABELS -c $COI -g 0 -p $PARAMS -v $VALUES
+python $PROJECT_DIR/train/train_semi_supervised.py -c $PROJECT_DIR/train/gs/config/${CONFIG_FILE}.yaml --clean-up &> $PROJECT_DIR/train/gs/logs/${CONFIG_FILE}.logs
 
 DOMAIN_SRC="EPFL"
 DOMAIN_TAR="MitoEM-R"
 
 # run experiments (first build the script, then run it)
 CONFIG_FILE=${METHOD}-${AVAILABLE_LABELS}-${DOMAIN_SRC}2${DOMAIN_TAR}
-python $PROJECT_DIR/util/build_config_da.py -b $PROJECT_DIR/train/unsupervised-da/config/base.yaml -ds ${DOMAIN_SRC} -dt ${DOMAIN_TAR} -m $METHOD -al $AVAILABLE_LABELS -c $COI -g 0 -p $PARAMS -v $VALUES
-python $PROJECT_DIR/train/train_semi_supervised.py -c $PROJECT_DIR/train/unsupervised-da/config/${CONFIG_FILE}.yaml --clean-up &> $PROJECT_DIR/train/unsupervised-da/logs/${CONFIG_FILE}.logs
+python $PROJECT_DIR/util/build_config_da.py -b $PROJECT_DIR/train/gs/config/base.yaml -ds ${DOMAIN_SRC} -dt ${DOMAIN_TAR} -m $METHOD -al $AVAILABLE_LABELS -c $COI -g 0 -p $PARAMS -v $VALUES
+python $PROJECT_DIR/train/train_semi_supervised.py -c $PROJECT_DIR/train/gs/config/${CONFIG_FILE}.yaml --clean-up &> $PROJECT_DIR/train/gs/logs/${CONFIG_FILE}.logs
 
 DOMAIN_SRC="VNC"
 DOMAIN_TAR="evhela"
 
 # run experiments (first build the script, then run it)
 CONFIG_FILE=${METHOD}-${AVAILABLE_LABELS}-${DOMAIN_SRC}2${DOMAIN_TAR}
-python $PROJECT_DIR/util/build_config_da.py -b $PROJECT_DIR/train/unsupervised-da/config/base.yaml -ds ${DOMAIN_SRC} -dt ${DOMAIN_TAR} -m $METHOD -al $AVAILABLE_LABELS -c $COI -g 0 -p $PARAMS -v $VALUES
-python $PROJECT_DIR/train/train_semi_supervised.py -c $PROJECT_DIR/train/unsupervised-da/config/${CONFIG_FILE}.yaml --clean-up &> $PROJECT_DIR/train/unsupervised-da/logs/${CONFIG_FILE}.logs
+python $PROJECT_DIR/util/build_config_da.py -b $PROJECT_DIR/train/gs/config/base.yaml -ds ${DOMAIN_SRC} -dt ${DOMAIN_TAR} -m $METHOD -al $AVAILABLE_LABELS -c $COI -g 0 -p $PARAMS -v $VALUES
+python $PROJECT_DIR/train/train_semi_supervised.py -c $PROJECT_DIR/train/gs/config/${CONFIG_FILE}.yaml --clean-up &> $PROJECT_DIR/train/gs/logs/${CONFIG_FILE}.logs

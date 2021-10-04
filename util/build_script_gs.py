@@ -52,10 +52,11 @@ with open(args.base_file, 'r') as f:
             param_values = [str(p.item(n)) for p in prms]
             lines_ = []
             for line in lines:
-                line = line.replace('<PARAMS>', ','.join(params))
+                line = line.replace('<PARAMS>', '"' + ','.join(params) + '"')
                 line = line.replace('<VALUES>', ','.join(param_values))
                 line = line.replace('<METHOD>', method)
                 line = line.replace('<AVAILABLE_LABELS>', str(al))
+                line = line.replace('<N_PARAM>', str(n))
                 lines_.append(line)
 
                 with open(os.path.join(args.target_dir, 'run_%s_%d.sh' % (method, n)), 'w') as f:

@@ -5,8 +5,8 @@
 # method
 method: u-net  # u-net
 # data
-data: /home/jorisro/research/data-local/EM/<DOMAIN>/raw
-labels: /home/jorisro/research/data-local/EM/<DOMAIN>/labels
+data: /home/jorisro/research/data/EM/<DOMAIN>/raw
+labels: /home/jorisro/research/data/EM/<DOMAIN>/labels
 train_val_test_split: <TRAIN_VAL_TEST_SPLIT>
 split_orientation: <SPLIT_ORIENTATION>
 type: pngseq
@@ -14,16 +14,16 @@ augmentation: rot90,flipx,flipy,contrast,noise
 # network
 input_size: <INPUT_SIZE>
 in_channels: 1
-fm: 64
+fm: 16
 levels: 4
-dropout: 0.00
-norm: instance
+dropout: 0.25
+norm: batch
 activation: relu
 coi: <COI>
 # optimization
 loss: dice
 lr: 0.001
-epochs: 100
+epochs: 200
 len_epoch: 2000
 train_batch_size: 4
 test_batch_size: 4
