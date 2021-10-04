@@ -99,7 +99,7 @@ with open(args.base_file, 'r') as f:
     if len(args.params) > 0:
         # override default params if necessary
         method_params = [(p, v) for p, v in zip(args.params, args.values)]
-    logdir = args.method + '-' + str(args.n_param)
+    logdir = args.method + '-' + str(args.n_param) + '-' + args.src_domain + '2' + args.tar_domain
     for k in data.keys():
         if type(data[k]) == str:
             data[k] = data[k].replace('<LOG_DIR>', logdir)
