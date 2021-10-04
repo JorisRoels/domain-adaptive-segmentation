@@ -76,7 +76,16 @@ parser.add_argument("--method", "-m", help="Method to use", type=str, default='u
 parser.add_argument("--available-labels", "-al", help="Fraction of available target labels", type=float, default=0.0)
 parser.add_argument("--gpu", "-g", help="Index of the GPU computing device", type=int, default=0)
 parser.add_argument("--coi", "-c", help="Class of interest (1: mito, 2: er, 3: nm)", type=int, default=1)
+parser.add_argument("--params", "-p", help="Parameters that should be set (e.g. <LAMBDA_MMD>)", type=str, default="")
+parser.add_argument("--values", "-v", help="Values of the parameters that should be set", type=str, default="")
 args = parser.parse_args()
+
+if len(args.params) != 0 and len(args.values) != 0:
+    args.params = args.params.split(',')
+    args.values = [float(v) for v in args.values.split(',')]
+else:
+    args.params = []
+    args.values = []
 
 # get default parameters
 params = _default_params()
@@ -86,6 +95,9 @@ with open(args.base_file, 'r') as f:
     data = yaml.load(f, Loader=SafeLoader)
     sz = _get_sz(params['input_size'][args.src_domain], params['input_size'][args.tar_domain])
     method_params = params['method-params'][args.method]
+    if len(args.params) > 0:
+        # override default params if necessary
+        method_params = [(p, v) for p, v in zip(args.params, args.values)]
     logdir = args.method + '-' + str(args.available_labels) + '-' + args.src_domain + '2' + args.tar_domain
     for k in data.keys():
         if type(data[k]) == str:
@@ -99,9 +111,9 @@ with open(args.base_file, 'r') as f:
             elif data[k] == '<GPU>':
                 data[k] = args.gpu
             else:
-                for m_param in method_params:
-                    if data[k] == m_param[0]:
-                        data[k] = m_param[1]
+                for p, v in method_params:
+                    if data[k] == p:
+                        data[k] = v
         elif type(data[k]) == dict:
             domain = args.src_domain if k == 'src' else args.tar_domain
             for l in data[k].keys():
