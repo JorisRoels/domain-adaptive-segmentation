@@ -10,11 +10,12 @@ import yaml
 import os
 import shutil
 import time
+import torch
 
 import pytorch_lightning as pl
 from pytorch_lightning.callbacks import ModelCheckpoint
 
-from neuralnets.util.io import print_frm
+from neuralnets.util.io import print_frm, mkdir
 from neuralnets.util.tools import set_seed
 from neuralnets.util.validation import validate
 
@@ -52,11 +53,13 @@ if __name__ == '__main__':
         # data for pretraining
         train_loader_src, val_loader_src, test_loader_src = get_dataloaders(params, domain='src',
                                                                             domain_labels_available=1.0)
-        # data for finetuning
-        train_loader_tar, val_loader_tar, test_loader_tar = get_dataloaders(params, domain='tar',
-                                                                domain_labels_available=params['tar_labels_available'])
     else:
+        # data for joint pretraining
         train_loader, val_loader, test_loader = get_dataloaders(params)
+
+    # data for finetuning and final testing
+    train_loader_tar, val_loader_tar, test_loader_tar = get_dataloaders(params, domain='tar',
+                                                            domain_labels_available=params['tar_labels_available'])
 
     """
         Build the network
@@ -69,8 +72,11 @@ if __name__ == '__main__':
     """
     print_frm('Starting training')
     t_start = time.perf_counter()
+
     print_frm('Training with loss: %s' % params['loss'])
     if params['method'] == 'no-da':
+
+        # pretrain on the source data
         print_frm('Starting pretraining')
         lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval='step')
         checkpoint_callback = ModelCheckpoint(save_top_k=5, verbose=True, monitor='val/mIoU', mode='max')
@@ -79,25 +85,36 @@ if __name__ == '__main__':
                                  log_every_n_steps=params['log_freq'], callbacks=[lr_monitor, checkpoint_callback],
                                  progress_bar_refresh_rate=params['log_refresh_rate'])
         trainer_pre.fit(net, train_loader_src, val_loader_src)
-        if params['tar_labels_available'] > 0:
-            print_frm('Starting finetuning')
-            lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval='step')
-            checkpoint_callback = ModelCheckpoint(save_top_k=5, verbose=True, monitor='val/mIoU', mode='max')
-            trainer = pl.Trainer(max_epochs=params['epochs'] // 2, gpus=params['gpus'], accelerator=params['accelerator'],
+
+    else:
+
+        # train domain adaptive on the source and target data
+        print_frm('Starting joint pretraining')
+        lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval='step')
+        checkpoint_callback = ModelCheckpoint(save_top_k=5, verbose=True, monitor='val/mIoU_tar', mode='max')
+        trainer_pre = pl.Trainer(max_epochs=params['epochs'], gpus=params['gpus'], accelerator=params['accelerator'],
                                  default_root_dir=params['log_dir'], flush_logs_every_n_steps=params['log_freq'],
                                  log_every_n_steps=params['log_freq'], callbacks=[lr_monitor, checkpoint_callback],
                                  progress_bar_refresh_rate=params['log_refresh_rate'])
-            trainer.fit(net, train_loader_tar, val_loader_tar)
-        else:
-            trainer = trainer_pre
-    else:
-        lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval='step')
-        checkpoint_callback = ModelCheckpoint(save_top_k=5, verbose=True, monitor='val/mIoU_tar', mode='max')
-        trainer = pl.Trainer(max_epochs=params['epochs'], gpus=params['gpus'], accelerator=params['accelerator'],
+        trainer_pre.fit(net, train_loader, val_loader)
+
+    # if target labels are available, finetune on the target data
+    if params['tar_labels_available'] > 0:
+        print_frm('Starting finetuning on target')
+        checkpoint_callback = ModelCheckpoint(save_top_k=5, verbose=True, monitor='val/mIoU', mode='max')
+        trainer = pl.Trainer(max_epochs=params['epochs'] // 2, gpus=params['gpus'], accelerator=params['accelerator'],
                              default_root_dir=params['log_dir'], flush_logs_every_n_steps=params['log_freq'],
-                             log_every_n_steps=params['log_freq'], callbacks=[lr_monitor, checkpoint_callback],
+                             log_every_n_steps=params['log_freq'], callbacks=[checkpoint_callback],
                              progress_bar_refresh_rate=params['log_refresh_rate'])
-        trainer.fit(net, train_loader, val_loader)
+        unet = net.get_unet()
+        unet.lr = params['lr'] / 10
+        unet.lr = params['lr'] / 10
+        trainer.fit(unet, train_loader_tar, val_loader_tar)
+        unet.load_state_dict(torch.load(trainer.checkpoint_callback.best_model_path)['state_dict'])
+    else:
+        trainer = trainer_pre
+        unet = net.get_unet()
+
     t_stop = time.perf_counter()
     print_frm('Elapsed training time: %d hours, %d minutes, %.2f seconds' % process_seconds(t_stop - t_start))
     print_frm('Average time / epoch: %.2f hours, %d minutes, %.2f seconds' %
@@ -108,11 +125,8 @@ if __name__ == '__main__':
     """
     print_frm('Testing network')
     t_start = time.perf_counter()
-    if params['method'] == 'no-da':
-        test_data, test_labels = test_loader_tar.dataset.data[0], test_loader_tar.dataset.labels[0]
-    else:
-        test_data, test_labels = test_loader.dataset.data[0], test_loader.dataset.labels[0]
-    validate(net.get_unet(), test_data, test_labels, params['input_size'], in_channels=params['in_channels'],
+    test_data, test_labels = test_loader_tar.dataset.data[0], test_loader_tar.dataset.labels[0]
+    validate(unet, test_data, test_labels, params['input_size'], in_channels=params['in_channels'],
              classes_of_interest=params['coi'], batch_size=params['test_batch_size'],
              write_dir=os.path.join(trainer.log_dir, 'best_predictions'),
              val_file=os.path.join(trainer.log_dir, 'metrics.npy'), device=params['gpus'][0])
@@ -130,10 +144,11 @@ if __name__ == '__main__':
     """
     print_frm('Cleaning up')
     if args.clean_up:
-        if params['method'] == 'no-da':
-            os.system('rm -r ' + os.path.join(trainer.log_dir, 'checkpoints'))
-            if params['tar_labels_available'] > 0:
-                os.system('rm -r ' + trainer_pre.log_dir)
-                os.rename(trainer.log_dir, trainer_pre.log_dir)
-        else:
-            os.system('rm -r ' + os.path.join(trainer.log_dir, 'checkpoints'))
+        os.system('rm -r ' + os.path.join(trainer.log_dir, 'checkpoints'))
+        mkdir(os.path.join(trainer.log_dir, 'pretraining'))
+        os.system('mv ' + trainer.log_dir + '/events.out.tfevents.* ' + os.path.join(trainer.log_dir, 'pretraining'))
+        if params['tar_labels_available'] > 0:
+            mkdir(os.path.join(trainer.log_dir, 'finetuning'))
+            os.system('mv ' + trainer_pre.log_dir + '/events.out.tfevents.* ' + os.path.join(trainer.log_dir, 'finetuning'))
+            os.system('rm -r ' + trainer_pre.log_dir)
+            os.rename(trainer.log_dir, trainer_pre.log_dir)

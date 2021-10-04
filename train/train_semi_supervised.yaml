@@ -22,21 +22,21 @@ tar:
   split_orientation: z
 type: pngseq
 augmentation: rot90,flipx,flipy,contrast,deformation,noise  # options: rot90,flipx,flipy,contrast,deformation,noise
-tar_labels_available: 0.00
+tar_labels_available: 1.00
 # network
 input_size: 256,256
 in_channels: 1
 fm: 16
 levels: 4
-dropout: 0.00
+dropout: 0.25
 norm: batch
 activation: relu
 coi: 0,1
 # optimization
 loss: dice
 lr: 0.001
-epochs: 5
-len_epoch: 2000
+epochs: 10
+len_epoch: 200
 train_batch_size: 4
 test_batch_size: 4
 # compute

@@ -11,7 +11,7 @@ from neuralnets.networks.unet import UNet2D
 from neuralnets.util.losses import CrossEntropyLoss
 
 LEN_EPOCH = 1000
-STEP_SIZE = 1
+STEP_SIZE = 5
 GAMMA = 0.95
 
 
