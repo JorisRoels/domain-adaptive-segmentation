@@ -17,12 +17,13 @@ from torch.utils.data import DataLoader
 
 from neuralnets.data.datasets import LabeledVolumeDataset, UnlabeledSlidingWindowDataset
 from neuralnets.util.augmentation import *
-from neuralnets.util.io import print_frm, write_volume
+from neuralnets.util.io import print_frm
 from neuralnets.util.tools import set_seed
 from neuralnets.util.validation import segment_read
 
 from util.tools import parse_params, process_seconds
 from networks.factory import generate_model
+from train.base import train
 
 from multiprocessing import freeze_support
 
@@ -56,30 +57,29 @@ if __name__ == '__main__':
     split_tar = params['tar']['train_val_split']
     transform = Compose([Rotate90(), Flip(prob=0.5, dim=0), Flip(prob=0.5, dim=1), ContrastAdjust(adj=0.1),
                          AddNoise(sigma_max=0.05)])
-    len_epoch = 2000
     print_frm('Train data...')
-    train = LabeledVolumeDataset((params['src']['data'], params['tar']['data']),
-                                 (params['src']['labels'], None), len_epoch=len_epoch,
+    train_data = LabeledVolumeDataset((params['src']['data'], params['tar']['data']),
+                                 (params['src']['labels'], None), len_epoch=params['len_epoch'],
                                  input_shape=input_shape, in_channels=params['in_channels'],
                                  type=params['type'], batch_size=params['train_batch_size'], transform=transform,
                                  range_split=((0, split_src[0]), (0, split_tar[0])),
                                  range_dir=(params['src']['split_orientation'], params['tar']['split_orientation']))
     print_frm('Validation data...')
-    val = LabeledVolumeDataset((params['src']['data'], params['tar']['data']),
-                               (params['src']['labels'], None), len_epoch=len_epoch,
+    val_data = LabeledVolumeDataset((params['src']['data'], params['tar']['data']),
+                               (params['src']['labels'], None), len_epoch=params['len_epoch'],
                                input_shape=input_shape, in_channels=params['in_channels'], type=params['type'],
                                batch_size=params['test_batch_size'], transform=transform,
                                range_split=((split_src[0], 1), (split_tar[0], 1)),
                                range_dir=(params['src']['split_orientation'], params['tar']['split_orientation']))
     print_frm('Test data...')
-    test = UnlabeledSlidingWindowDataset(params['tar']['data'], input_shape=input_shape,
+    test_data = UnlabeledSlidingWindowDataset(params['tar']['data'], input_shape=input_shape,
                                          in_channels=params['in_channels'], type=params['type'],
                                          batch_size=params['test_batch_size'])
-    train_loader = DataLoader(train, batch_size=params['train_batch_size'], num_workers=params['num_workers'],
+    train_loader = DataLoader(train_data, batch_size=params['train_batch_size'], num_workers=params['num_workers'],
                               pin_memory=True)
-    val_loader = DataLoader(val, batch_size=params['test_batch_size'], num_workers=params['num_workers'],
+    val_loader = DataLoader(val_data, batch_size=params['test_batch_size'], num_workers=params['num_workers'],
                             pin_memory=True)
-    test_loader = DataLoader(test, batch_size=params['test_batch_size'], num_workers=params['num_workers'],
+    test_loader = DataLoader(test_data, batch_size=params['test_batch_size'], num_workers=params['num_workers'],
                              pin_memory=True)
 
     """
@@ -94,16 +94,7 @@ if __name__ == '__main__':
     print_frm('Starting training')
     print_frm('Training with loss: %s' % params['loss'])
     lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval='step')
-    trainer = pl.Trainer(max_epochs=params['epochs'], gpus=params['gpus'], accelerator=params['accelerator'],
-                         default_root_dir=params['log_dir'], flush_logs_every_n_steps=params['log_freq'],
-                         log_every_n_steps=params['log_freq'], callbacks=[lr_monitor],
-                         progress_bar_refresh_rate=params['log_refresh_rate'])
-    t_start = time.perf_counter()
-    trainer.fit(net, train_loader, val_loader)
-    t_stop = time.perf_counter()
-    print_frm('Elapsed training time: %d hours, %d minutes, %.2f seconds' % process_seconds(t_stop - t_start))
-    print_frm('Average time / epoch: %.2f hours, %d minutes, %.2f seconds' %
-              process_seconds((t_stop - t_start) / params['epochs']))
+    trainer = train(net, train_loader, val_loader, [lr_monitor], params)
 
     """
         Testing the network
