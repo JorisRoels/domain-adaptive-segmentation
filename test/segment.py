@@ -14,7 +14,7 @@ from neuralnets.util.io import print_frm, read_pngseq
 from neuralnets.util.tools import set_seed
 from neuralnets.util.validation import segment_read, segment_ram
 
-from util.functions import parse_params, process_seconds
+from util.tools import parse_params, process_seconds
 from networks.factory import generate_model
 
 from multiprocessing import freeze_support
