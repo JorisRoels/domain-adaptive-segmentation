@@ -26,7 +26,7 @@ tar_labels_available: <AVAILABLE_LABELS>
 # network
 input_size: <INPUT_SIZE>
 in_channels: 1
-fm: 32
+fm: 16
 levels: 4
 dropout: 0.00
 norm: batch
@@ -44,7 +44,7 @@ gpus: <GPU>
 num_workers: 12
 accelerator: dp
 # logging
-log_dir: train/semi-supervised-da/logs/<LOG_DIR>
+log_dir: /home/jorisro/research/domain-adaptive-segmentation/train/semi-supervised-da/logs/<LOG_DIR>
 log_freq: 50
 log_refresh_rate: 0
 # reproducibility
