@@ -117,6 +117,6 @@ if __name__ == '__main__':
     """
         Clean up
     """
-    print_frm('Cleaning up')
     if args.clean_up:
+        print_frm('Cleaning up')
         os.system('rm -r ' + os.path.join(trainer.log_dir, 'checkpoints'))
