@@ -35,8 +35,8 @@ def _default_params():
     params['method-params'][YNET] = [('<LAMBDA_REC>', 100)]
     params['method-params'][UNET_TS] = [('<LAMBDA_O>', 10000), ('<LAMBDA_W>', 100)]
     for method in [NO_DA, MMD, DAT, UNET_TS]:
-        params['dropout'][method] = '0.00'
-    params['dropout'][YNET] = '0.25'
+        params['dropout'][method] = 0.00
+    params['dropout'][YNET] = 0.25
 
     # train/val/test split parameters
     params['train_val_test_split'][EPFL] = '0.40,0.50'
@@ -114,11 +114,12 @@ with open(args.base_file, 'r') as f:
                 data[k] = args.available_labels
             elif data[k] == '<GPU>':
                 data[k] = args.gpu
+            elif data[k] == '<DROPOUT>':
+                data[k] = params['dropout'][args.method]
             else:
                 for p, v in method_params:
                     if data[k] == p:
                         data[k] = v
-                data[k] = data[k].replace('<DROPOUT>', params['dropout'][args.method])
         elif type(data[k]) == dict:
             domain = args.src_domain if k == 'src' else args.tar_domain
             for l in data[k].keys():
