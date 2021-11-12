@@ -39,6 +39,6 @@ def validate(net, trainer, loader, params):
     validate_base(net, test_data, test_labels, params['input_size'], in_channels=params['in_channels'],
                   classes_of_interest=params['coi'], batch_size=params['test_batch_size'],
                   write_dir=os.path.join(trainer.log_dir, 'best_predictions'),
-                  val_file=os.path.join(trainer.log_dir, 'metrics.npy'), device=params['gpus'][0])
+                  val_file=os.path.join(trainer.log_dir, 'metrics.npy'), device=params['gpus'][0], track_progress=True)
     t_stop = time.perf_counter()
     print_frm('Elapsed testing time: %d hours, %d minutes, %.2f seconds' % process_seconds(t_stop - t_start))
