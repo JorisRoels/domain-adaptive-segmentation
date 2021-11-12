@@ -115,6 +115,7 @@ with open(args.base_file, 'r') as f:
                 for p, v in method_params:
                     if data[k] == p:
                         data[k] = v
+                data[k] = data[k].replace('<DROPOUT>', params['dropout'][args.method])
         elif type(data[k]) == dict:
             domain = args.src_domain if k == 'src' else args.tar_domain
             for l in data[k].keys():
