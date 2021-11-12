@@ -28,14 +28,14 @@ input_size: <INPUT_SIZE>
 in_channels: 1
 fm: 16
 levels: 4
-dropout: 0.00
+dropout: <DROPOUT>
 norm: batch
 activation: relu
 coi: <COI>
 # optimization
 loss: dice
 lr: 0.001
-epochs: 100
+epochs: 200
 len_epoch: 2000
 train_batch_size: 4
 test_batch_size: 4
