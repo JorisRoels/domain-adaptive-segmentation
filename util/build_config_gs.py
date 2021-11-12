@@ -33,6 +33,9 @@ def _default_params():
     params['method-params'][DAT] = [('<LAMBDA_DAT>', 0.01)]
     params['method-params'][YNET] = [('<LAMBDA_REC>', 100)]
     params['method-params'][UNET_TS] = [('<LAMBDA_O>', 10000), ('<LAMBDA_W>', 100)]
+    for method in [NO_DA, MMD, DAT, UNET_TS]:
+        params['dropout'][method] = '0.00'
+    params['dropout'][YNET] = '0.25'
 
     # train/val/test split parameters
     params['train_val_test_split'][EPFL] = '0.40,0.50'
