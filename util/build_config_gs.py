@@ -25,7 +25,8 @@ UNET_TS = 'unet-ts'
 
 def _default_params():
 
-    params = {'train_val_test_split': {}, 'split_orientation': {}, 'input_size': {}, 'coi': {}, 'method-params': {}}
+    params = {'train_val_test_split': {}, 'split_orientation': {}, 'input_size': {}, 'coi': {}, 'method-params': {},
+              'dropout': {}}
 
     # method parameters
     params['method-params'][NO_DA] = []
