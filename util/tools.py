@@ -62,7 +62,7 @@ def get_dataloaders(params, domain=None, domain_labels_available=1.0, supervised
                                    range_split=((split_src[0], split_src[1]), (split_tar[0], split_tar[1])),
                                    range_dir=(params['src']['split_orientation'], params['tar']['split_orientation']))
         print_frm('Test data...')
-        test = LabeledSlidingWindowDataset(params['tar']['data'], params['tar']['labels'], input_shape=None,
+        test = LabeledSlidingWindowDataset(params['tar']['data'], params['tar']['labels'],
                                            in_channels=params['in_channels'], type=params['type'],
                                            batch_size=params['test_batch_size'], range_split=(split_tar[1], 1),
                                            range_dir=params['tar']['split_orientation'])
@@ -91,10 +91,9 @@ def get_dataloaders(params, domain=None, domain_labels_available=1.0, supervised
                                    batch_size=params['test_batch_size'], transform=transform,
                                    range_split=(split[0], split[1]), range_dir=range_dir, coi=params['coi'])
         print_frm('Test data...')
-        test = LabeledSlidingWindowDataset(data, labels, input_shape=input_shape, in_channels=params['in_channels'],
-                                           type=params['type'], batch_size=params['test_batch_size'],
-                                           transform=transform, range_split=(split[1], 1), range_dir=range_dir,
-                                           coi=params['coi'])
+        test = LabeledSlidingWindowDataset(data, labels, in_channels=params['in_channels'], type=params['type'],
+                                           batch_size=params['test_batch_size'], transform=transform,
+                                           range_split=(split[1], 1), range_dir=range_dir, coi=params['coi'])
 
         print_frm('Train volume shape: %s' % str(train.data[0].shape))
         print_frm('Available labels for training: %d%% (i.e. %.2f MV)' % (domain_labels_available*100,
