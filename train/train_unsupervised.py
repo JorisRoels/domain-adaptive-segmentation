@@ -1,7 +1,6 @@
 """
     This is a script that illustrates unsupervised domain adaptive training, i.e. without using any target labels
 """
-import numpy as np
 
 """
     Necessary libraries
@@ -10,20 +9,19 @@ import argparse
 import yaml
 import os
 import shutil
-import time
 
 import pytorch_lightning as pl
+from pytorch_lightning.callbacks import ModelCheckpoint
 from torch.utils.data import DataLoader
 
 from neuralnets.data.datasets import LabeledVolumeDataset, UnlabeledSlidingWindowDataset
 from neuralnets.util.augmentation import *
-from neuralnets.util.io import print_frm
+from neuralnets.util.io import print_frm, mkdir
 from neuralnets.util.tools import set_seed
-from neuralnets.util.validation import segment_read
 
-from util.tools import parse_params, process_seconds
+from util.tools import parse_params
 from networks.factory import generate_model
-from train.base import train
+from train.base import train, validate
 
 from multiprocessing import freeze_support
 
@@ -58,23 +56,23 @@ if __name__ == '__main__':
     transform = Compose([Rotate90(), Flip(prob=0.5, dim=0), Flip(prob=0.5, dim=1), ContrastAdjust(adj=0.1),
                          AddNoise(sigma_max=0.05)])
     print_frm('Train data...')
-    train_data = LabeledVolumeDataset((params['src']['data'], params['tar']['data']),
-                                 (params['src']['labels'], None), len_epoch=params['len_epoch'],
-                                 input_shape=input_shape, in_channels=params['in_channels'],
-                                 type=params['type'], batch_size=params['train_batch_size'], transform=transform,
-                                 range_split=((0, split_src[0]), (0, split_tar[0])),
-                                 range_dir=(params['src']['split_orientation'], params['tar']['split_orientation']))
+    train_data = LabeledVolumeDataset((params['src']['data'], params['tar']['data']), (params['src']['labels'], None),
+                                      len_epoch=params['len_epoch'], input_shape=input_shape,
+                                      in_channels=params['in_channels'], type=params['type'],
+                                      batch_size=params['train_batch_size'], transform=transform,
+                                      range_split=((0, split_src[0]), (0, split_tar[0])),
+                                      range_dir=(params['src']['split_orientation'], params['tar']['split_orientation']))
     print_frm('Validation data...')
-    val_data = LabeledVolumeDataset((params['src']['data'], params['tar']['data']),
-                               (params['src']['labels'], None), len_epoch=params['len_epoch'],
-                               input_shape=input_shape, in_channels=params['in_channels'], type=params['type'],
-                               batch_size=params['test_batch_size'], transform=transform,
-                               range_split=((split_src[0], 1), (split_tar[0], 1)),
-                               range_dir=(params['src']['split_orientation'], params['tar']['split_orientation']))
+    val_data = LabeledVolumeDataset((params['src']['data'], params['tar']['data']), (params['src']['labels'], None),
+                                    len_epoch=params['len_epoch'], input_shape=input_shape,
+                                    in_channels=params['in_channels'], type=params['type'],
+                                    batch_size=params['test_batch_size'], transform=transform,
+                                    range_split=((split_src[0], 1), (split_tar[0], 1)),
+                                    range_dir=(params['src']['split_orientation'], params['tar']['split_orientation']))
     print_frm('Test data...')
     test_data = UnlabeledSlidingWindowDataset(params['tar']['data'], input_shape=input_shape,
-                                         in_channels=params['in_channels'], type=params['type'],
-                                         batch_size=params['test_batch_size'])
+                                              in_channels=params['in_channels'], type=params['type'],
+                                              batch_size=params['test_batch_size'])
     train_loader = DataLoader(train_data, batch_size=params['train_batch_size'], num_workers=params['num_workers'],
                               pin_memory=True)
     val_loader = DataLoader(val_data, batch_size=params['test_batch_size'], num_workers=params['num_workers'],
@@ -91,27 +89,23 @@ if __name__ == '__main__':
     """
         Train the network
     """
-    print_frm('Starting training')
-    print_frm('Training with loss: %s' % params['loss'])
     lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval='step')
-    trainer = train(net, train_loader, val_loader, [lr_monitor], params)
+    print_frm('Starting joint pretraining')
+    print_frm('Training with loss: %s' % params['loss'])
+    checkpoint_callback = ModelCheckpoint(save_top_k=5, verbose=True, monitor='val/mIoU', mode='max')
+    trainer = train(net, train_loader, val_loader, [lr_monitor, checkpoint_callback], params)
+    unet = net.get_unet()
 
     """
         Testing the network
     """
-    print_frm('Testing network')
-    t_start = time.perf_counter()
-    segment_read(params['tar']['data'], net.get_unet(), input_shape[1:],
-                 os.path.join(trainer.log_dir, 'test_predictions'), in_channels=params['in_channels'],
-                 batch_size=params['test_batch_size'], track_progress=True, device=params['gpus'][0])
-    t_stop = time.perf_counter()
-    print_frm('Elapsed time segmenting and writing the (unlabeled) test data: %d hours, %d minutes, %.2f seconds' %
-              process_seconds(t_stop - t_start))
+    print_frm('Testing network final performance')
+    validate(unet, trainer, test_loader, params)
 
     """
         Save the final model
     """
-    print_frm('Saving final model and test predictions')
+    print_frm('Saving final model')
     shutil.copyfile(trainer.checkpoint_callback.best_model_path, os.path.join(trainer.log_dir, 'best_model.ckpt'))
 
     """
@@ -120,3 +114,5 @@ if __name__ == '__main__':
     if args.clean_up:
         print_frm('Cleaning up')
         os.system('rm -r ' + os.path.join(trainer.log_dir, 'checkpoints'))
+        mkdir(os.path.join(trainer.log_dir, 'pretraining'))
+        os.system('mv ' + trainer.log_dir + '/events.out.tfevents.* ' + os.path.join(trainer.log_dir, 'pretraining'))
