@@ -1,4 +1,4 @@
-#!/bin/bash -l
+#!/bin/bash
 
 # pull most recent neuralnets version
 echo "Updating neuralnets..."
