@@ -1,4 +1,4 @@
-# This code builds the grid search scripts that will be launched on HPC
+# This code builds the grid search scripts for unet-ts that will be launched on HPC
 
 import os
 import argparse
@@ -26,7 +26,7 @@ MMD = 'mmd'
 DAT = 'dat'
 YNET = 'ynet'
 UNET_TS = 'unet-ts'
-METHODS = [MMD, DAT, YNET, UNET_TS]
+METHODS = [UNET_TS]
 PARAMS = {MMD: {'<LAMBDA_MMD>': (3, 9, 1)}, DAT: {'<LAMBDA_DAT>': (-3, 3, 1)},
           YNET: {'<LAMBDA_REC>': (-1, 5, 1)}, UNET_TS: {'<LAMBDA_O>': (0, 9, 2), '<LAMBDA_W>': (-2, 7, 2)}}
 
