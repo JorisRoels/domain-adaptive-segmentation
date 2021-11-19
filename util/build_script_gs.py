@@ -54,10 +54,11 @@ with open(args.base_file, 'r') as f:
             lines_ = []
             for line in lines:
                 line = line.replace('<PARAMS>', '"' + ','.join(params) + '"')
-                line = line.replace('<VALUES>', '(' + ','.join(param_values) + ')')
+                line = line.replace('<VALUES>', '"' + ','.join(param_values) + '"')
                 line = line.replace('<METHOD>', method)
                 line = line.replace('<COI>', str(args.coi))
                 line = line.replace('<AVAILABLE_LABELS>', str(al))
+                line = line.replace('<N>', str(n))
                 lines_.append(line)
 
                 with open(os.path.join(args.target_dir, 'run_%s_%d_%d.sh' % (method, n, args.coi)), 'w') as f:
