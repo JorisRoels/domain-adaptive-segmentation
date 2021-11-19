@@ -324,7 +324,7 @@ class YNet2D(UNetDA2D):
         self.loss_rec = nn.MSELoss()
 
         # reconstruction decoder
-        self.decoder_rec = UNetDecoder2D(self.out_channels, feature_maps=self.feature_maps, levels=self.levels,
+        self.decoder_rec = UNetDecoder2D(in_channels, feature_maps=self.feature_maps, levels=self.levels,
                                          skip_connections=False, norm=self.norm, dropout=self.dropout_dec,
                                          activation=self.activation)
 
