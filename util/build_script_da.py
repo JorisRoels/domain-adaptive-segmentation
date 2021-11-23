@@ -53,17 +53,18 @@ with open(args.base_file, 'r') as f:
         for i, al in enumerate(args.available_labels):
             for src_domain in args.src_domains:
                 for tar_domain in args.tar_domains:
+                    if src_domain != tar_domain:
 
-                    lines_ = []
-                    for line in lines:
-                        line = line.replace('<METHOD>', method)
-                        line = line.replace('<AVAILABLE_LABELS>', str(al))
-                        line = line.replace('<SRC_DOMAINS>', '"' + src_domain + '"')
-                        line = line.replace('<TAR_DOMAINS>', '"' + tar_domain + '"')
-                        lines_.append(line)
+                        lines_ = []
+                        for line in lines:
+                            line = line.replace('<METHOD>', method)
+                            line = line.replace('<AVAILABLE_LABELS>', str(al))
+                            line = line.replace('<SRC_DOMAINS>', '"' + src_domain + '"')
+                            line = line.replace('<TAR_DOMAINS>', '"' + tar_domain + '"')
+                            lines_.append(line)
 
-                    with open(os.path.join(args.target_dir, 'run_%s_%d_%s2%s.sh' % (method, i, src_domain, tar_domain)), 'w') as f:
-                        for line in lines_:
-                            f.write(line)
+                        with open(os.path.join(args.target_dir, 'run_%s_%d_%s2%s.sh' % (method, i, src_domain, tar_domain)), 'w') as f:
+                            for line in lines_:
+                                f.write(line)
 
 # replace the method, available labels, source and target domains
