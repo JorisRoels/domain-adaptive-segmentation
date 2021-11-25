@@ -58,6 +58,7 @@ with open(args.base_file, 'r') as f:
                         lines_ = []
                         for line in lines:
                             line = line.replace('<METHOD>', method)
+                            line = line.replace('<COI>', str(args.coi))
                             line = line.replace('<AVAILABLE_LABELS>', str(al))
                             line = line.replace('<SRC_DOMAINS>', '"' + src_domain + '"')
                             line = line.replace('<TAR_DOMAINS>', '"' + tar_domain + '"')
