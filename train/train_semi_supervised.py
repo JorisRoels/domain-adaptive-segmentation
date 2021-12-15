@@ -49,17 +49,10 @@ if __name__ == '__main__':
         Load the data
     """
     print_frm('Loading data')
-    if params['method'] == 'no-da':
-        # data for pretraining
-        train_loader_src, val_loader_src, test_loader_src = get_dataloaders(params, domain='src',
-                                                                            domain_labels_available=1.0)
-    else:
-        # data for joint pretraining
-        train_loader, val_loader, test_loader = get_dataloaders(params)
-
-    # data for finetuning and final testing
-    train_loader_tar, val_loader_tar, test_loader_tar = get_dataloaders(params, domain='tar',
-                                                            domain_labels_available=params['tar_labels_available'])
+    train_loader, val_loader, test_loader = get_dataloaders(params)
+    if params['tar_labels_available'] > 0:
+        train_loader_tar, val_loader_tar, test_loader_tar = get_dataloaders(params, domain='tar',
+                                                                domain_labels_available=params['tar_labels_available'])
 
     """
         Build the network
@@ -71,21 +64,10 @@ if __name__ == '__main__':
         Train the network
     """
     lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval='step')
-    if params['method'] == 'no-da':
-
-        # pretrain on the source data
-        print_frm('Starting pretraining')
-        print_frm('Training with loss: %s' % params['loss'])
-        checkpoint_callback = ModelCheckpoint(save_top_k=5, verbose=True, monitor='val/mIoU', mode='max')
-        trainer_pre = train(net, train_loader_src, val_loader_src, [lr_monitor, checkpoint_callback], params)
-
-    else:
-
-        # train domain adaptive on the source and target data
-        print_frm('Starting joint pretraining')
-        print_frm('Training with loss: %s' % params['loss'])
-        checkpoint_callback = ModelCheckpoint(save_top_k=5, verbose=True, monitor='val/mIoU_tar', mode='max')
-        trainer_pre = train(net, train_loader, val_loader, [lr_monitor, checkpoint_callback], params)
+    print_frm('Starting joint pretraining')
+    print_frm('Training with loss: %s' % params['loss'])
+    checkpoint_callback = ModelCheckpoint(save_top_k=5, verbose=True, monitor='val/mIoU_tar', mode='max')
+    trainer_pre = train(net, train_loader, val_loader, [lr_monitor, checkpoint_callback], params)
 
     # if target labels are available, finetune on the target data
     unet = net.get_unet()
@@ -124,11 +106,23 @@ if __name__ == '__main__':
     """
     if args.clean_up:
         print_frm('Cleaning up')
-        os.system('rm -r ' + os.path.join(trainer.log_dir, 'checkpoints'))
+        shutil.rmtree(os.path.join(trainer.log_dir, 'checkpoints'), ignore_errors=True)
         mkdir(os.path.join(trainer.log_dir, 'pretraining'))
-        os.system('mv ' + trainer.log_dir + '/events.out.tfevents.* ' + os.path.join(trainer.log_dir, 'pretraining'))
+        for file_name in os.listdir(trainer.log_dir):
+            shutil.move(os.path.join(trainer.log_dir, file_name), os.path.join(trainer.log_dir, 'pretraining'))
         if params['tar_labels_available'] > 0:
             mkdir(os.path.join(trainer.log_dir, 'finetuning'))
-            os.system('mv ' + trainer_pre.log_dir + '/events.out.tfevents.* ' + os.path.join(trainer.log_dir, 'finetuning'))
-            os.system('rm -r ' + trainer_pre.log_dir)
-            os.system('mv ' + trainer.log_dir + ' ' + trainer_pre.log_dir)
+            for file_name in os.listdir(trainer_pre.log_dir):
+                shutil.move(os.path.join(trainer_pre.log_dir, file_name), os.path.join(trainer.log_dir, 'finetuning'))
+            shutil.rmtree(trainer_pre.log_dir, ignore_errors=True)
+            shutil.move(trainer.log_dir, trainer_pre.log_dir)
+
+
+        # os.system('rm -r ' + os.path.join(trainer.log_dir, 'checkpoints'))
+        # mkdir(os.path.join(trainer.log_dir, 'pretraining'))
+        # os.system('mv ' + trainer.log_dir + '/events.out.tfevents.* ' + os.path.join(trainer.log_dir, 'pretraining'))
+        # if params['tar_labels_available'] > 0:
+        #     mkdir(os.path.join(trainer.log_dir, 'finetuning'))
+        #     os.system('mv ' + trainer_pre.log_dir + '/events.out.tfevents.* ' + os.path.join(trainer.log_dir, 'finetuning'))
+        #     os.system('rm -r ' + trainer_pre.log_dir)
+        #     os.system('mv ' + trainer.log_dir + ' ' + trainer_pre.log_dir)

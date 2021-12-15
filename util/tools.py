@@ -51,21 +51,22 @@ def get_dataloaders(params, domain=None, domain_labels_available=1.0, supervised
                                      (params['src']['labels'], params['tar']['labels']), len_epoch=params['len_epoch'],
                                      input_shape=input_shape, in_channels=params['in_channels'],
                                      type=params['type'], batch_size=params['train_batch_size'], transform=transform,
-                                     range_split=((0, split_src[0]), (0, split_tar[0])),
+                                     range_split=((0, split_src[0]), (0, split_tar[0])), coi=params['coi'],
                                      range_dir=(params['src']['split_orientation'], params['tar']['split_orientation']),
                                      partial_labels=(1, params['tar_labels_available']), seed=params['seed'])
         print_frm('Validation data...')
         val = LabeledVolumeDataset((params['src']['data'], params['tar']['data']),
                                    (params['src']['labels'], params['tar']['labels']), len_epoch=params['len_epoch'],
                                    input_shape=input_shape, in_channels=params['in_channels'], type=params['type'],
-                                   batch_size=params['test_batch_size'],
+                                   batch_size=params['test_batch_size'], coi=params['coi'],
                                    range_split=((split_src[0], split_src[1]), (split_tar[0], split_tar[1])),
-                                   range_dir=(params['src']['split_orientation'], params['tar']['split_orientation']))
+                                   range_dir=(params['src']['split_orientation'], params['tar']['split_orientation']),
+                                   partial_labels=(1, params['tar_labels_available']), seed=params['seed'])
         print_frm('Test data...')
         test = LabeledSlidingWindowDataset(params['tar']['data'], params['tar']['labels'],
                                            in_channels=params['in_channels'], type=params['type'],
                                            batch_size=params['test_batch_size'], range_split=(split_tar[1], 1),
-                                           range_dir=params['tar']['split_orientation'])
+                                           range_dir=params['tar']['split_orientation'], coi=params['coi'])
 
         print_frm('Train volume shape: %s (source) - %s (target)' % (str(train.data[0].shape), str(train.data[1].shape)))
         print_frm('Available target labels for training: %.1f (i.e. %.2f MV)' % (params['tar_labels_available']*100,
@@ -89,14 +90,15 @@ def get_dataloaders(params, domain=None, domain_labels_available=1.0, supervised
         val = LabeledVolumeDataset(data, labels, len_epoch=params['len_epoch'], input_shape=input_shape,
                                    in_channels=params['in_channels'], type=params['type'],
                                    batch_size=params['test_batch_size'], transform=transform,
-                                   range_split=(split[0], split[1]), range_dir=range_dir, coi=params['coi'])
+                                   range_split=(split[0], split[1]), range_dir=range_dir, coi=params['coi'],
+                                   partial_labels=(1, params['tar_labels_available']), seed=params['seed'])
         print_frm('Test data...')
         test = LabeledSlidingWindowDataset(data, labels, in_channels=params['in_channels'], type=params['type'],
                                            batch_size=params['test_batch_size'], transform=transform,
                                            range_split=(split[1], 1), range_dir=range_dir, coi=params['coi'])
 
         print_frm('Train volume shape: %s' % str(train.data[0].shape))
-        print_frm('Available labels for training: %d%% (i.e. %.2f MV)' % (domain_labels_available*100,
+        print_frm('Available %s labels for training: %d%% (i.e. %.2f MV)' % (domain, domain_labels_available*100,
                                                     np.prod(train.data[0].shape)*domain_labels_available / 1000 / 1000))
         print_frm('Validation volume shape: %s' % str(val.data[0].shape))
         print_frm('Test volume shape: %s' % str(test.data[0].shape))
