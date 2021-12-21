@@ -72,6 +72,14 @@ def _get_sz(src_sz, tar_sz):
     return str(sz) + ',' + str(sz)
 
 
+def _parse_params(method_params):
+    ps = []
+    for p, v in method_params:
+        v = [str(x) for x in v]
+        ps.append('%s:%s' % (p, ';'.join(v)))
+    return '#'.join(ps)
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument("--base_file", "-b", help="Path to the base configuration file", type=str, default='clem1.yaml')
 parser.add_argument("--src-domain", "-ds", help="Source domain", type=str, default='EPFL')
@@ -117,10 +125,8 @@ with open(args.base_file, 'r') as f:
                 data[k] = args.gpu
             elif data[k] == '<DROPOUT>':
                 data[k] = params['dropout'][args.method]
-            else:
-                for p, v in method_params:
-                    if data[k] == p:
-                        data[k] = v
+            elif data[k] == '<PARAMS>':
+                data[k] = _parse_params(method_params)
         elif type(data[k]) == dict:
             domain = args.src_domain if k == 'src' else args.tar_domain
             for l in data[k].keys():
