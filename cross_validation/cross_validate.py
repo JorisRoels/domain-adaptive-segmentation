@@ -18,7 +18,7 @@ from multiprocessing import freeze_support
 from sklearn.model_selection import GridSearchCV
 from torch.utils.data import DataLoader
 
-from util.tools import parse_params, parse_search_grid
+from util.tools import parse_params, parse_search_grid, get_transforms
 from networks.factory import generate_classifier
 
 
@@ -48,15 +48,15 @@ if __name__ == '__main__':
     input_shape = (1, *(params['input_size']))
     split_src = params['src']['train_val_test_split']
     split_tar = params['tar']['train_val_test_split']
-    transform = Compose([Rotate90(), Flip(prob=0.5, dim=0), Flip(prob=0.5, dim=1), ContrastAdjust(adj=0.1),
-                         RandomDeformation(), AddNoise(sigma_max=0.05), CleanDeformedLabels(params['coi'])])
+    transform = get_transforms(params['augmentation'], coi=params['coi'])
     print_frm('Training data...')
     train = LabeledVolumeDataset((params['src']['data'], params['tar']['data']),
-                                 (params['src']['labels'], params['tar']['labels']),
-                                 input_shape=input_shape, type=params['type'], batch_size=params['train_batch_size'],
-                                 range_split=((0, split_src[1]), (0, split_tar[1])),
+                                 (params['src']['labels'], params['tar']['labels']), len_epoch=params['len_epoch'],
+                                 input_shape=input_shape, in_channels=params['in_channels'],
+                                 type=params['type'], batch_size=params['train_batch_size'], transform=transform,
+                                 range_split=((0, split_src[0]), (0, split_tar[0])), coi=params['coi'],
                                  range_dir=(params['src']['split_orientation'], params['tar']['split_orientation']),
-                                 norm_type=None)
+                                 partial_labels=(1, 1), seed=params['seed'])
     loader = DataLoader(train, batch_size=params['train_batch_size'], num_workers=params['num_workers'])
     X_train = np.linspace(0, 1 - 1 / len(train), num=len(train))
     y_train = np.random.randint(2, size=(len(train)))

@@ -10,7 +10,6 @@ from neuralnets.cross_validation.base import UNet2DClassifier
 from neuralnets.networks.unet import UNet2D
 from neuralnets.util.losses import CrossEntropyLoss
 
-LEN_EPOCH = 1000
 STEP_SIZE = 5
 GAMMA = 0.95
 
@@ -324,14 +323,14 @@ class UNetDA2DClassifier(UNet2DClassifier):
                  orientations=(0,), normalization='unit', transform=None, input_shape=(1, 256, 256), in_channels=1,
                  coi=(0, 1), feature_maps=64, levels=4, skip_connections=True, residual_connections=False,
                  norm='instance', activation='relu', dropout=0.0, loss_fn=CrossEntropyLoss(), lr=1e-3,
-                 partial_labels=1):
+                 partial_labels=1, len_epoch=1000):
         super().__init__(epochs=epochs, gpus=gpus, accelerator=accelerator, log_dir=log_dir, log_freq=log_freq,
                          log_refresh_rate=log_refresh_rate, train_batch_size=train_batch_size,
                          test_batch_size=test_batch_size, num_workers=num_workers, device=device,
                          orientations=orientations, normalization=normalization, transform=transform,
                          input_shape=input_shape, in_channels=in_channels, coi=coi, feature_maps=feature_maps,
                          levels=levels, skip_connections=skip_connections, residual_connections=residual_connections,
-                         norm=norm, activation=activation, dropout=dropout, loss_fn=loss_fn, lr=lr)
+                         norm=norm, activation=activation, dropout=dropout, loss_fn=loss_fn, lr=lr, len_epoch=len_epoch)
 
         # parameters
         self.dataset = dataset
@@ -358,11 +357,11 @@ class UNetDA2DClassifier(UNet2DClassifier):
         for i, ckpt in enumerate(checkpoints):
             ckpt_path = os.path.join(self.trainer.checkpoint_callback.dirpath, ckpt)
             self.model.load_state_dict(torch.load(ckpt_path))
-            model = self.model.get_unet()
+            model = self.model.get_unet(load_best=False)
             metrics[i] = model.validate(X[1], y[1], model.input_shape, in_channels=model.in_channels,
                                         classes_of_interest=model.coi, batch_size=self.test_batch_size,
                                         device=self.device, orientations=self.orientations,
-                                        normalization=self.normalization, report=False)
+                                        normalization=self.normalization, report=False, track_progress=True)
 
         # find the best model state
         j = np.argmax(metrics)
@@ -370,8 +369,13 @@ class UNetDA2DClassifier(UNet2DClassifier):
 
         # remove the remaining checkpoints
         for i, ckpt in enumerate(checkpoints):
-            if i != j:
-                ckpt_path = os.path.join(self.trainer.checkpoint_callback.dirpath, ckpt)
+            ckpt_path = os.path.join(self.trainer.checkpoint_callback.dirpath, ckpt)
+            if i == j:
+                os.rename(ckpt_path, os.path.join(self.trainer.checkpoint_callback.dirpath, 'best_checkpoint.ckpt'))
+            else:
                 os.remove(ckpt_path)
+
+        if metric == 1:
+            print()
 
         return metric

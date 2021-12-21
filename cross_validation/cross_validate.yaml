@@ -3,7 +3,7 @@
 # ===========
 #
 # method
-method: unet-ts  # no-da, mmd, dat, ynet, wnet or unet-ts
+method: mmd  # no-da, mmd, dat, ynet, wnet or unet-ts
 lambda_mmd: 1
 lambda_dat: 1
 lambda_rec: 1
@@ -24,6 +24,7 @@ type: pngseq
 tar_labels_available: 0.10
 # network
 input_size: 256,256
+in_channels: 1
 fm: 16
 levels: 4
 dropout: 0.00
@@ -31,9 +32,10 @@ norm: batch
 activation: relu
 coi: 0,1
 # optimization
-loss: ce
+loss: dice
 lr: 0.001
-epochs: 1
+epochs: 200
+len_epoch: 2000
 train_batch_size: 4
 test_batch_size: 4
 # compute
@@ -43,10 +45,10 @@ accelerator: dp
 # logging
 log_dir: unet_2d
 log_freq: 50
-log_refresh_rate: -1
+log_refresh_rate: 0
 # reproducibility
 seed: 0
 # grid search cross validation: search grid of the form param1:v1;v2;v3#param2:w1;w2#...
-search_grid: lambda_o:0.1;10
+search_grid: lambda_mmd:0.1;10
 folds: 3
 results_file: results.pickle

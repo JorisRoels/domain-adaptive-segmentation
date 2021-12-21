@@ -2,7 +2,7 @@ import torch
 import pytorch_lightning as pl
 
 from torch.utils.data import DataLoader
-from networks.base import UNetDA2D, UNetDA2DClassifier, data_from_range,LEN_EPOCH
+from networks.base import UNetDA2D, UNetDA2DClassifier, data_from_range
 
 from neuralnets.data.datasets import LabeledVolumeDataset
 
@@ -100,7 +100,7 @@ class UNetNoDA2DClassifier(UNetDA2DClassifier):
         # construct dataloader
         train = LabeledVolumeDataset(X, y, input_shape=(1, *self.input_shape), in_channels=self.in_channels,
                                      batch_size=self.train_batch_size, transform=self.transform,
-                                     partial_labels=self.partial_labels, len_epoch=LEN_EPOCH)
+                                     partial_labels=self.partial_labels, len_epoch=self.len_epoch)
         loader = DataLoader(train, batch_size=self.train_batch_size, num_workers=self.num_workers, pin_memory=True)
 
         # train the network
