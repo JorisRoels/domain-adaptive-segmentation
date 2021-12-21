@@ -1,4 +1,4 @@
-# This code builds the grid search scripts for unet-ts that will be launched on HPC
+# This code builds the grid search scripts that will be launched on HPC
 
 import os
 import argparse
