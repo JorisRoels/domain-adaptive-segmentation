@@ -27,8 +27,8 @@ DAT = 'dat'
 YNET = 'ynet'
 UNET_TS = 'unet-ts'
 METHODS = [MMD, DAT, YNET, UNET_TS]
-PARAMS = {MMD: {'<LAMBDA_MMD>': (3, 9, 1)}, DAT: {'<LAMBDA_DAT>': (-3, 3, 1)},
-          YNET: {'<LAMBDA_REC>': (-1, 5, 1)}, UNET_TS: {'<LAMBDA_O>': (0, 9, 2), '<LAMBDA_W>': (-2, 7, 2)}}
+PARAMS = {MMD: {'lambda_mmd': (3, 9, 1)}, DAT: {'lambda_dat': (-3, 3, 1)},
+          YNET: {'lambda_rec': (-1, 5, 1)}, UNET_TS: {'lambda_o': (0, 9, 2), 'lambda_w': (-2, 7, 2)}}
 
 # available labels
 al = 0.20
