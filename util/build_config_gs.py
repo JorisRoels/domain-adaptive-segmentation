@@ -75,7 +75,7 @@ def _get_sz(src_sz, tar_sz):
 def _parse_params(method_params):
     ps = []
     for p, v in method_params:
-        ps.append('%s:%s' % (p, ';'.join(str(v))))
+        ps.append('%s:%s' % (p, str(v)))
     return '#'.join(ps)
 
 
