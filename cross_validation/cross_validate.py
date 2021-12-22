@@ -54,7 +54,7 @@ if __name__ == '__main__':
                                  (params['src']['labels'], params['tar']['labels']), len_epoch=params['len_epoch'],
                                  input_shape=input_shape, in_channels=params['in_channels'],
                                  type=params['type'], batch_size=params['train_batch_size'], transform=transform,
-                                 range_split=((0, split_src[0]), (0, split_tar[0])), coi=params['coi'],
+                                 range_split=((0, split_src[1]), (0, split_tar[1])), coi=params['coi'],
                                  range_dir=(params['src']['split_orientation'], params['tar']['split_orientation']),
                                  partial_labels=(1, 1), seed=params['seed'])
     loader = DataLoader(train, batch_size=params['train_batch_size'], num_workers=params['num_workers'])
