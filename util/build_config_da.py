@@ -30,10 +30,10 @@ def _default_params():
 
     # method parameters
     params['method-params'][NO_DA] = []
-    params['method-params'][MMD] = [('<LAMBDA_MMD>', 10000)]
-    params['method-params'][DAT] = [('<LAMBDA_DAT>', 0.01)]
-    params['method-params'][YNET] = [('<LAMBDA_REC>', 10)]
-    params['method-params'][UNET_TS] = [('<LAMBDA_O>', 1), ('<LAMBDA_W>', 1000000)]
+    params['method-params'][MMD] = [('<LAMBDA_MMD>', 1e6)]
+    params['method-params'][DAT] = [('<LAMBDA_DAT>', 1e-2)]
+    params['method-params'][YNET] = [('<LAMBDA_REC>', 1e-1)]
+    params['method-params'][UNET_TS] = [('<LAMBDA_O>', 1e4), ('<LAMBDA_W>', 1e0)]
     for method in [NO_DA, MMD, DAT, UNET_TS]:
         params['dropout'][method] = 0.00
     params['dropout'][YNET] = 0.25
