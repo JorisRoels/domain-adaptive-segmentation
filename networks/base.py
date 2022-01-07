@@ -361,7 +361,7 @@ class UNetDA2DClassifier(UNet2DClassifier):
             metrics[i] = model.validate(X[1], y[1], model.input_shape, in_channels=model.in_channels,
                                         classes_of_interest=model.coi, batch_size=self.test_batch_size,
                                         device=self.device, orientations=self.orientations,
-                                        normalization=self.normalization, report=False, track_progress=True)
+                                        normalization=self.normalization, report=False)
 
         # find the best model state
         j = np.argmax(metrics)
