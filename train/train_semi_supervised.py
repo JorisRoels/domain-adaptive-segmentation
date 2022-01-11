@@ -49,9 +49,8 @@ if __name__ == '__main__':
         Load the data
     """
     print_frm('Loading data')
-    train_loader, val_loader, test_loader = get_dataloaders(params)
-    if params['tar_labels_available'] > 0:
-        train_loader_tar, val_loader_tar, test_loader_tar = get_dataloaders(params, domain='tar',
+    train_loader, val_loader, _ = get_dataloaders(params)
+    train_loader_tar, val_loader_tar, test_loader_tar = get_dataloaders(params, domain='tar',
                                                                 domain_labels_available=params['tar_labels_available'])
 
     """
@@ -93,7 +92,7 @@ if __name__ == '__main__':
         Testing the network
     """
     print_frm('Testing network final performance')
-    validate(unet, trainer, test_loader_tar if params['tar_labels_available'] > 0 else test_loader, params)
+    validate(unet, trainer, test_loader_tar, params)
 
     """
         Save the final model
