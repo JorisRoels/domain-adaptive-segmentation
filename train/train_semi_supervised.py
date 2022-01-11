@@ -93,7 +93,7 @@ if __name__ == '__main__':
         Testing the network
     """
     print_frm('Testing network final performance')
-    validate(unet, trainer, test_loader_tar, params)
+    validate(unet, trainer, test_loader_tar if params['tar_labels_available'] > 0 else test_loader, params)
 
     """
         Save the final model
@@ -116,13 +116,3 @@ if __name__ == '__main__':
                 shutil.move(os.path.join(trainer_pre.log_dir, file_name), os.path.join(trainer.log_dir, 'finetuning'))
             shutil.rmtree(trainer_pre.log_dir, ignore_errors=True)
             shutil.move(trainer.log_dir, trainer_pre.log_dir)
-
-
-        # os.system('rm -r ' + os.path.join(trainer.log_dir, 'checkpoints'))
-        # mkdir(os.path.join(trainer.log_dir, 'pretraining'))
-        # os.system('mv ' + trainer.log_dir + '/events.out.tfevents.* ' + os.path.join(trainer.log_dir, 'pretraining'))
-        # if params['tar_labels_available'] > 0:
-        #     mkdir(os.path.join(trainer.log_dir, 'finetuning'))
-        #     os.system('mv ' + trainer_pre.log_dir + '/events.out.tfevents.* ' + os.path.join(trainer.log_dir, 'finetuning'))
-        #     os.system('rm -r ' + trainer_pre.log_dir)
-        #     os.system('mv ' + trainer.log_dir + ' ' + trainer_pre.log_dir)
