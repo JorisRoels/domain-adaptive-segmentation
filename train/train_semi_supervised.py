@@ -65,7 +65,8 @@ if __name__ == '__main__':
     lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval='step')
     print_frm('Starting joint pretraining')
     print_frm('Training with loss: %s' % params['loss'])
-    checkpoint_callback = ModelCheckpoint(save_top_k=5, verbose=True, monitor='val/mIoU_tar', mode='max')
+    monitor = 'val/mIoU_tar' if params['tar_labels_available'] > 0 else 'val/mIoU_src'
+    checkpoint_callback = ModelCheckpoint(save_top_k=5, verbose=True, monitor=monitor, mode='max')
     trainer_pre = train(net, train_loader, val_loader, [lr_monitor, checkpoint_callback], params)
 
     # if target labels are available, finetune on the target data
