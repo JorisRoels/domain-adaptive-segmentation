@@ -106,12 +106,4 @@ if __name__ == '__main__':
     if args.clean_up:
         print_frm('Cleaning up')
         rmdir(os.path.join(trainer.log_dir, 'checkpoints'))
-        mkdir(os.path.join(trainer.log_dir, 'pretraining'))
-        for file_name in os.listdir(trainer.log_dir):
-            mv(os.path.join(trainer.log_dir, file_name), os.path.join(trainer.log_dir, 'pretraining'))
-        if params['tar_labels_available'] > 0:
-            mkdir(os.path.join(trainer.log_dir, 'finetuning'))
-            for file_name in os.listdir(trainer_pre.log_dir):
-                mv(os.path.join(trainer_pre.log_dir, file_name), os.path.join(trainer.log_dir, 'finetuning'))
-            rmdir(trainer_pre.log_dir)
-            mv(trainer.log_dir, trainer_pre.log_dir)
+        rmdir(os.path.join(trainer_pre.log_dir, 'checkpoints'))
