@@ -1,3 +1,4 @@
+import shutil
 from torch.utils.data import DataLoader
 
 from neuralnets.data.datasets import LabeledVolumeDataset, LabeledSlidingWindowDataset
@@ -198,3 +199,18 @@ def process_seconds(s):
     s -= m*60
 
     return h, m, s
+
+
+def rmdir(dir):
+    print_frm('    Removing %s' % dir)
+    shutil.rmtree(dir, ignore_errors=True)
+
+
+def cp(source, target):
+    print_frm('    Copying %s -> %s' % (source, target))
+    shutil.copyfile(source, target)
+
+
+def mv(source, target):
+    print_frm('    Moving %s -> %s' % (source, target))
+    shutil.move(source, target)
