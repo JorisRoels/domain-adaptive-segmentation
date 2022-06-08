@@ -2,32 +2,14 @@
 
 This repository contains all the necessary tools to train segmentation algorithms in a domain adaptive fashion.
 
-Please cite this work if you use this code: 
-```
-@article{roels2021,
-  author    = {Joris Roels and
-               Saskia Lippens and
-               Yvan Saeys},
-  title     = {Adaptive Segmentation of Ultrastructural Cell Organelles in Volume Electron Microscopy},
-  year      = {2021},
-  url       = {https://github.com/JorisRoels/domain-adaptive-segmentation},
-}
-```
-
 ## Installation
 First make sure you have [Python](https://www.python.org/) (we tested with Python 3.8) installed, and preferably a [CUDA capable device](https://developer.nvidia.com/cuda-gpus). 
 
 Clone this repository to a directory of your choice and install the required dependencies: 
-```
+<pre><code>git clone https://github.com/JorisRoels/domain-adaptive-segmentations
+cd domain-adaptive-segmentation
 pip install -r requirements.txt
-```
-
-Optionally: if you want to run the example scripts, you will have to download the data. Everything is publicly available and can be pulled locally by running the following script: 
-```
-python data/download_3dem_repo.py --download_dir data/3dem_repo
-```
-
-You should now be good to go! 
+</code></pre>
 
 ## Usage
 
@@ -36,13 +18,13 @@ You can run an unsupervised domain adaptive demo by running the following comman
 ```
 python train/train_unsupervised.py -c train/train_unsupervised.yaml
 ```
-The provided YAML file is a configuration file that contains all necessary parameters. Note that you may have to adjust the data paths, depending on where you downloaded the data. By default, this will train a Y-Net with the EPFL and Kasthuri data as source and target, respectively. 
+The provided YAML file is a configuration file that contains all necessary parameters. Note that you may have to adjust the data paths, depending on where you downloaded the data. By default, this will train a Y-Net with the EPFL and VNC data as source and target, respectively. 
 
 Similarly, you can run a semi-supervised domain adaptive demo by running the following command: 
 ```
 python train/train_semi_supervised.py -c train/train_semi_supervised.yaml
 ```
-By default, this will do the same thing as the previous demo, but additionally employ 5% labeled target data. 
+By default, this will do the same thing as the previous demo, but additionally employ labeled target data. 
 
 Feel free to adjust the parameter settings in the configuration files and check out the effect on the outcome! 
 
@@ -60,7 +42,7 @@ As with most algorithms, parameter optimization is important in domain adaptive 
 ```
 python cross_validation/cross_validate.py -c cross_validate/cross_validate.yaml
 ```
-This will perform 3-fold grid search cross validation w.r.t. the reconstruction regularization parameter of Y-Net for unsupervised domain adaptive training with the EPFL and Kasthuri data as source and target, respectively. These settings can be adjusted in the configuration file. Note that this can be computationally intensive, especially as the amount of parameters in the grid or number of folds increases. 
+This will perform 3-fold grid search cross validation w.r.t. the reconstruction regularization parameter of Y-Net for unsupervised domain adaptive training with the EPFL and VNC data as source and target, respectively. These settings can be adjusted in the configuration file. Note that this can be computationally intensive, especially as the amount of parameters in the grid or number of folds increases. 
 
 ### Segmenting new datasets with pretrained models
 Apply pretrained models on new datasets is relatively straightforward. Make sure the new data is in the right format (see two sections before). Next, you can segment the data by running the following command. 
