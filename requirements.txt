@@ -8,7 +8,7 @@ opencv-python==4.4.0.42
 elasticdeform==0.4.9
 future==0.18.2
 tensorboard==2.3.0
-numpy==1.20.2
+numpy==1.22.0
 h5py==2.10.0
 scikit-image==0.18.1
 progress==1.5
