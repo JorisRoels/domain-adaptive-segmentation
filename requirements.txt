@@ -6,7 +6,7 @@ torchmetrics==0.2.0
 torchvision==0.9.1
 opencv-python==4.4.0.42
 elasticdeform==0.4.9
-future==0.18.2
+future==0.18.3
 tensorboard==2.3.0
 numpy==1.20.2
 h5py==2.10.0
